@@ -1,0 +1,62 @@
+/*
+ * Mobile top bar shared by the student pages (student_dashboard, my_document, student_calendar,
+ * student_notifications, checklist, student_request, student_settings).
+ * At ≤1024px the sidebar is hidden, so the menu button sits in this fixed bar instead of
+ * floating over the page heading. Link this file after the page's own <style> blocks.
+ */
+.mobile-appbar { display: none; }
+
+@media (max-width: 1024px) {
+    :root { --appbar-height: 60px; }
+
+    body { padding-top: var(--appbar-height); }
+
+    .mobile-appbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 990; /* below the sidebar overlay (999) and sidebar (1000+) */
+        height: var(--appbar-height);
+        padding: 0 16px;
+        background: rgba(255, 255, 255, 0.95);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        backdrop-filter: saturate(180%) blur(12px);
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+    }
+
+    .mobile-appbar .mobile-toggle,
+    body.sidebar-open .mobile-appbar .mobile-toggle {
+        position: static;
+        display: flex !important;
+        flex-shrink: 0;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+        transition: transform 0.15s ease;
+    }
+    .mobile-appbar .mobile-toggle:active { transform: scale(0.94); }
+    .mobile-appbar .mobile-toggle i { font-size: 18px; }
+
+    .mobile-appbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        color: #0f172a;
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+    .mobile-appbar-brand img { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+    .mobile-appbar-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Pages no longer need to leave room for a floating button */
+    .top-bar { padding-left: 0 !important; }
+    .sidebar .sidebar-header { padding-top: 24px; }
+}

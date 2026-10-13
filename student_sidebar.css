@@ -1,0 +1,194 @@
+/*
+ * One sidebar for every page a student sees.
+ *
+ * The project has no includes, so each page carries its own copy of the sidebar
+ * markup and CSS — and the copies had drifted: submissions.php and reject.php
+ * (shared with the registrar, so the student branch is styled under
+ * body.student-mode) used 24px gutters, taller nav rows and a logout pinned to
+ * the bottom, while the seven student-only pages used 20px gutters, shorter rows
+ * and a logout sitting right under the menu. The sidebar therefore jumped every
+ * time the student clicked Submissions and back.
+ *
+ * This file pins those measurements in one place. It is linked AFTER each page's
+ * inline <style>, so it wins on equal specificity; every selector carries a
+ * student marker (body.student-shell on the seven student-only pages,
+ * body.student-mode on the two shared ones) so the registrar's own dark sidebar
+ * on submissions.php and reject.php is never touched.
+ *
+ * Mobile behaviour stays in student_mobile.css / registrar_mobile.css: below
+ * 1024px the rules here are limited to the ones that do not fight the drawer.
+ */
+
+/* ── Shell ─────────────────────────────────────────────────────────────────── */
+body.student-shell .sidebar,
+body.student-mode .sidebar {
+    width: 280px;
+    /* Through the variable, so the colour a student picks in Settings (stored in
+       localStorage and set on <body> by each page's script) still applies. */
+    background: var(--sidebar-bg, #ffffff);
+    border-right: 1px solid #e2e8f0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* ── Header: seal, "Student Portal", and the student's own card ────────────── */
+body.student-shell .sidebar .sidebar-header,
+body.student-mode .sidebar .sidebar-header {
+    padding: 24px 20px 0 20px;
+}
+
+body.student-shell .sidebar .logo-area,
+body.student-mode .sidebar .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+body.student-shell .sidebar .logo-icon,
+body.student-mode .sidebar .logo-icon {
+    width: 36px;
+    height: 36px;
+    padding: 2px;
+    border-radius: 10px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+body.student-shell .sidebar .logo-text,
+body.student-mode .sidebar .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+body.student-shell .sidebar .student-info,
+body.student-mode .sidebar .student-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+body.student-shell .sidebar .student-name,
+body.student-mode .sidebar .student-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+body.student-shell .sidebar .student-id,
+body.student-mode .sidebar .student-id {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* ── Menu. The two shared pages call the rows .nav-link, the rest .nav-item ── */
+body.student-shell .sidebar .nav-menu,
+body.student-mode .sidebar .nav-menu {
+    flex: none;               /* the logout follows the menu, it is not pinned */
+    padding: 0 20px 16px 20px;
+}
+
+body.student-shell .sidebar .nav-item,
+body.student-mode .sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    border-radius: 12px;
+    border-left: none;
+    color: #475569;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+body.student-shell .sidebar .nav-item i,
+body.student-mode .sidebar .nav-link i {
+    width: 24px;
+    font-size: 18px;
+    text-align: center;
+}
+
+body.student-shell .sidebar .nav-item:not(.active):hover,
+body.student-mode .sidebar .nav-link:not(.active):hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+body.student-shell .sidebar .nav-item.active,
+body.student-mode .sidebar .nav-link.active {
+    background: var(--primary-color, #1a365d);
+    color: #ffffff;
+    padding-left: 14px;
+}
+
+body.student-shell .sidebar .nav-item.active i,
+body.student-mode .sidebar .nav-link.active i {
+    color: #ffffff;
+}
+
+/* The unread count keeps its place at the end of the row on every page. */
+body.student-shell .sidebar .nav-badge,
+body.student-mode .sidebar .nav-badge {
+    margin-left: auto;
+}
+
+/* ── Logout ────────────────────────────────────────────────────────────────── */
+body.student-shell .sidebar .sidebar-bottom,
+body.student-mode .sidebar .sidebar-bottom {
+    margin-top: 20px;
+    padding: 12px 20px 25px 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+body.student-shell .sidebar .logout-btn,
+body.student-mode .sidebar .logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    color: #dc2626;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+body.student-shell .sidebar .logout-btn i,
+body.student-mode .sidebar .logout-btn i {
+    width: 24px;
+    font-size: 18px;
+    text-align: center;
+}
+
+body.student-shell .sidebar .logout-btn:hover,
+body.student-mode .sidebar .logout-btn:hover {
+    background: #fef2f2;
+}
+
+/* ── Phones: the drawer's own position stays with the mobile sheets ────────── */
+@media (max-width: 1024px) {
+    body.student-shell .sidebar,
+    body.student-mode .sidebar {
+        width: 280px;
+    }
+
+    /* submissions.php and reject.php keep the floating menu button for students,
+       so their drawer still leaves room for it at the top — this restores the
+       offset those pages set, which the header padding above would otherwise win. */
+    body.student-mode .sidebar .sidebar-header {
+        padding-top: 65px;
+    }
+}

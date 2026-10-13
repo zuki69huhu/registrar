@@ -1,0 +1,307 @@
+/*
+ * The filed request drawn as the paper form it replaces (see request_form_render.php).
+ *
+ * Everything pre-printed on the blank form keeps its place and its measurements:
+ * the letterhead, the document-control box, the 2x2 photo box, the boxed tables,
+ * and above all the ruled lines. A rule is drawn whether or not the student
+ * filled it in — their answer is written ON the line, in ink blue, the way a
+ * ballpoint pen would leave it, so the sheet reads as the original form filled
+ * out rather than as a screen rendering of the same data.
+ *
+ * The page is laid out at a fixed A4 width in pixels so it looks identical
+ * wherever it is shown; the viewer scales the whole sheet with a transform, so
+ * text stays sharp at every zoom level instead of being re-rasterised.
+ *
+ * Linked by request_form_view.php (both the modal fragment's host page and the
+ * standalone print page) and by registrar_requests.php.
+ */
+
+/* The sheet must look the same in the registrar's modal (whose page resets
+   margins and box-sizing globally) and on the standalone print page (which does
+   not), so it normalises its own box model instead of inheriting the host's. */
+.rf-doc, .rf-doc *, .rf-doc *::before, .rf-doc *::after { box-sizing: border-box; }
+/* :where() keeps this at zero specificity, so every rule below still wins.
+   Only elements the browser gives a default margin to need clearing. */
+.rf-doc :where(p, table, h1, h2, h3, h4, ul, ol, li, figure) { margin: 0; }
+.rf-doc :where(table) { border-spacing: 0; }
+
+.rf-doc {
+    --rf-ink: #000;        /* pre-printed wording */
+    --rf-pen: #12317a;     /* what the student / registrar filled in */
+    --rf-muted: #444;
+    --rf-line: #000;
+    --rf-rule: #5585bf;    /* the letterhead rules, sampled off the original */
+    --rf-navy: #001f5f;    /* address, telefax and the website labels */
+    --rf-red: #c00000;
+    --rf-page-w: 794px;   /* A4 at 96dpi */
+    --rf-page-h: 1123px;
+
+    font-family: Arial, Helvetica, sans-serif;
+    color: var(--rf-ink);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: var(--rf-page-w);
+}
+
+.rf-page {
+    position: relative;
+    width: var(--rf-page-w);
+    min-height: var(--rf-page-h);
+    padding: 34px 40px 40px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.22);
+    font-size: 11px;
+    line-height: 1.32;
+}
+/* The stamp is clipped to the sheet by its own layer, so .rf-page itself can
+   stay overflow:visible and never cut a long answer off at the page edge. */
+.rf-watermark-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+/* ─── LETTERHEAD ───
+   Measured off the printed original and scaled to this sheet's 714px content
+   width (the original's rule is 894px wide, so every figure is x 0.7987):
+     - the seal is 10.5% of the rule's width, 3.2% in from its left end and
+       1.2% below it;
+     - the four lines are centred on the WHOLE width, not on the space beside
+       the seal, which is what puts the seal right up against the name;
+     - the lines are ~12pt with a 24.5px pitch on the original;
+     - the rules are #5585bf, the lines navy #001f5f, the addresses black. */
+.rf-rule { height: 2px; background: var(--rf-rule); }
+.rf-head-main { position: relative; height: 103px; }
+.rf-logo { position: absolute; left: 23px; top: 9px; width: 75px; height: 75px; object-fit: contain; }
+.rf-head-text { position: absolute; left: 0; right: 0; top: 15px; text-align: center; }
+.rf-school { font-size: 16.3px; line-height: 19.6px; font-weight: 700; color: var(--rf-red); }
+.rf-school-line { font-size: 15.7px; line-height: 19.6px; color: var(--rf-navy); white-space: nowrap; }
+.rf-link { color: #000; text-decoration: underline; text-underline-offset: 1px; }
+/* The original leaves a wide gap between the website and the e-mail address. */
+.rf-web-gap { display: inline-block; width: 45px; }
+/* The web line is one centred block; a second e-mail address (MCNP prints
+   registrar@ under adminoffice@) right-aligns under the first inside it, and
+   the letterhead grows by that one line. */
+.rf-web-block { display: inline-block; text-align: right; }
+.rf-head.has-email2 .rf-head-main { height: 122px; }
+/* ...and the letter gives that line back above the date, so a long school
+   address still leaves the sheet one A4 page tall. */
+.rf-head.has-email2 ~ .rf-letter-date { margin-top: 25px; }
+/* A title on its own line under the box costs ~30px, given back the same way. */
+.rf-head.has-title-below ~ .rf-letter-date { margin-top: 12px; }
+.rf-head.has-title-below ~ .rf-ticklist { margin-top: 28px; }
+.rf-head.has-title-below ~ .rf-stub { margin-top: 30px; }
+
+.rf-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-top: 10px; }
+.rf-titles { flex: 1; text-align: center; padding-left: 40px; }
+/* Without a document-control box the titles centre on the whole sheet. */
+.rf-titles.is-wide { padding-left: 0; }
+.rf-office { font-size: 13px; font-weight: 700; }
+.rf-form-name { font-size: 13px; font-weight: 700; margin-top: 10px; }
+/* MCNP's Form 007: the office line sits beside the box, level with its middle,
+   and the title takes its own line under the box, centred on the whole sheet. */
+.rf-title-row.is-title-below { align-items: center; }
+.rf-title-row.is-title-below .rf-titles { text-align: right; padding-left: 0; }
+.rf-form-name-below { text-align: center; font-size: 14px; margin-top: 12px; }
+/* That title line is taken back out of the gaps further down (see the letter
+   rules below), so the sheet stays one A4 page with a long school address. */
+.rf-control { border-collapse: collapse; width: 232px; flex-shrink: 0; font-size: 8.5px; }
+.rf-control td { border: 1px solid var(--rf-line); padding: 2px 4px; line-height: 1.3; }
+.rf-control strong { font-size: 9px; }
+
+/* ─── PAGE 1 ─── */
+/* The note and the course line stand beside the photo box, as on the original,
+   rather than the course line running underneath it. */
+.rf-intro { display: flex; align-items: stretch; justify-content: space-between; gap: 18px; margin: 12px 0 14px; }
+.rf-intro-left { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+.rf-note p { font-size: 11px; margin: 0 0 2px; }
+.rf-note em { text-decoration: underline; font-style: italic; }
+.rf-photo-box {
+    width: 128px; height: 112px; flex-shrink: 0;
+    border: 1px solid var(--rf-line);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; font-size: 11px; line-height: 1.5;
+}
+
+.rf-course-line { margin: 18px auto 2px; width: 80%; text-align: center; }
+.rf-course-value {
+    border-bottom: 1px solid var(--rf-line); padding-bottom: 2px; min-height: 17px;
+    font-weight: 700; font-size: 11.5px; color: var(--rf-pen);
+    white-space: nowrap; overflow: hidden;
+}
+.rf-course-caption { font-size: 11px; font-weight: 700; margin-top: 3px; color: var(--rf-ink); }
+
+/* ─── FILL-IN-THE-BLANKS ───
+   The label keeps its printed width; the rule takes the rest of the cell and
+   carries the answer, so an unanswered field looks exactly like the blank form. */
+.rf-field { display: flex; align-items: baseline; gap: 5px; width: 100%; }
+.rf-field > .rf-label { flex: 0 0 auto; }
+.rf-fill {
+    flex: 1 1 auto; min-width: 0;
+    border-bottom: 1px solid var(--rf-line);
+    padding: 0 2px 1px;
+    min-height: 14px;
+    color: var(--rf-pen);
+    font-weight: 600;
+    /* One line, fitted by request_form.js; never an ellipsis, which would hide
+       part of what the student wrote. */
+    white-space: nowrap; overflow: hidden; text-overflow: clip;
+}
+/* A rule standing inside a printed sentence, e.g. the submission deadline. */
+.rf-field.rf-inline { display: inline-flex; width: 170px; vertical-align: baseline; }
+/* Free-text notes may run onto more lines. */
+.rf-field.rf-wrap .rf-fill { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+/* The blanks the original prints two lines for (COLLEGE): the answer wraps into
+   them, and request_form.js shrinks it until it fits both. */
+.rf-field.rf-2line { align-items: flex-start; }
+.rf-field.rf-2line .rf-fill { white-space: normal; overflow: hidden; overflow-wrap: anywhere; line-height: 1.3; min-height: 30px; }
+.rf-education .rf-college-row .rf-cell { height: 40px; }
+
+/* ─── TABLES ─── */
+.rf-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+.rf-table .rf-cell { border: 1px solid var(--rf-line); padding: 4px 6px; vertical-align: top; }
+.rf-label { font-weight: 700; text-transform: uppercase; font-size: 10.5px; color: var(--rf-ink); }
+.rf-label em { text-transform: none; font-weight: 400; }
+.rf-personal .rf-cell { height: 26px; }
+/* The printed boxes are not equal thirds. */
+.rf-w48 { width: 48%; } .rf-w36 { width: 36%; } .rf-w34 { width: 34%; }
+.rf-w30 { width: 30%; } .rf-w22 { width: 22%; }
+.rf-education .rf-cell { height: 20px; }
+.rf-education .rf-year { width: 34%; }
+.rf-section-head { font-weight: 700; }
+
+/* The ruled lines the printed form leaves for the department to write on. */
+.rf-blank { display: block; border-bottom: 1px solid var(--rf-line); height: 12px; }
+.rf-ruled-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; padding: 2px 0 1px; }
+
+.rf-deadline { font-size: 11px; margin: 10px 0 6px; }
+
+/* ─── DOCUMENT CHECKLIST ─── */
+.rf-docs { font-size: 10.5px; }
+.rf-docs th { border: 1px solid var(--rf-line); padding: 3px 6px; font-size: 10.5px; font-weight: 700; text-align: left; }
+.rf-docs td { border: 1px solid var(--rf-line); padding: 2px 6px; vertical-align: top; }
+.rf-docs .rf-col-doc { width: 62%; }
+.rf-docs .rf-col-remark { width: 21%; }
+.rf-docs .rf-col-sig { width: 17%; }
+.rf-docs th.rf-col-remark, .rf-docs th.rf-col-sig { text-align: center; }
+.rf-num { font-weight: 400; display: inline-block; min-width: 17px; }
+.rf-sub { padding-left: 26px !important; }
+.rf-empty-row td { height: 14px; }
+
+.rf-yes { font-weight: 700; color: var(--rf-pen); white-space: nowrap; }
+.rf-check { font-size: 12px; }
+.rf-no { color: #a61b1b; }
+.rf-na { color: #6b7280; font-style: italic; }
+
+/* ─── REQUEST FOR FORM 137-A (Form 007) ─── */
+.rf-form-name.is-underlined { text-decoration: underline; }
+.rf-letter { font-size: 11.5px; }
+.rf-letter-date { display: flex; justify-content: flex-end; margin-top: 46px; }
+.rf-letter-date .rf-field.rf-inline { width: 190px; }
+
+.rf-addressee { margin-top: 10px; display: flex; flex-direction: column; gap: 11px; width: 74%; }
+.rf-addressee-title { font-weight: 700; font-size: 11.5px; margin-bottom: 2px; }
+/* The three ruled lines the letter leaves for the school's name and address. */
+.rf-addressee .rf-fill { display: block; width: 100%; min-height: 15px; }
+.rf-addressee .rf-fill-wrap { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+
+.rf-salutation { margin-top: 34px !important; font-size: 11.5px; }
+.rf-letter-body { margin-top: 14px !important; font-size: 11.5px; line-height: 1.5; text-align: justify; }
+
+.rf-letter-table { margin-top: 18px; margin-bottom: 0; table-layout: fixed; }
+.rf-letter-table th, .rf-letter-table td { border: 1px solid var(--rf-line); padding: 5px 6px; text-align: center; font-size: 10.5px; }
+.rf-letter-table th { font-weight: 700; line-height: 1.25; }
+.rf-letter-table td { height: 30px; vertical-align: middle; overflow-wrap: anywhere; }
+.rf-pen-text { color: var(--rf-pen); font-weight: 600; }
+
+.rf-letter-thanks { margin-top: 16px !important; font-size: 11.5px; text-align: center; }
+.rf-letter-sign { margin-top: 20px; display: flex; flex-direction: column; align-items: center; }
+.rf-letter-sign .rf-vty { font-size: 11.5px; align-self: center; margin-right: -90px; }
+.rf-sig-block { margin-top: 46px; text-align: center; }
+.rf-sig-name { font-weight: 700; font-size: 11.5px; text-decoration: underline; }
+.rf-sig-role { font-size: 11.5px; }
+
+.rf-ticklist { margin-top: 40px; display: flex; flex-direction: column; gap: 0; width: 60%; }
+.rf-tickrow { display: flex; align-items: center; gap: 8px; }
+.rf-tickbox {
+    width: 20px; height: 16px; flex-shrink: 0;
+    border: 1px solid var(--rf-line); border-bottom-width: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 11px; color: var(--rf-pen);
+}
+.rf-tickrow:last-child .rf-tickbox { border-bottom-width: 1px; }
+.rf-ticklabel { font-size: 11.5px; }
+
+.rf-ctrlno {
+    margin-top: 30px; width: 40%;
+    display: flex; align-items: baseline; gap: 6px;
+    border: 1px solid var(--rf-line); padding: 5px 8px;
+}
+.rf-ctrlno .rf-label { text-transform: none; font-weight: 400; font-size: 11.5px; }
+.rf-ctrlno .rf-fill { border-bottom: none; }
+
+/* ─── PAGE 2 ─── */
+.rf-waiver { font-size: 11px; margin: 26px 0 0; text-indent: 34px; line-height: 1.45; }
+.rf-signature-block { display: flex; justify-content: flex-end; margin-top: 54px; }
+.rf-signature { width: 60%; text-align: center; }
+.rf-signed-name {
+    font-weight: 700; font-size: 12px; min-height: 17px; padding-bottom: 2px;
+    border-bottom: 1px solid var(--rf-line); color: var(--rf-pen);
+    white-space: nowrap; overflow: hidden;
+}
+.rf-sig-caption { font-size: 10.5px; font-weight: 700; margin-top: 2px; }
+.rf-sig-date { font-size: 10.5px; margin-top: 10px; text-align: left; }
+.rf-sig-date .rf-label { font-size: 10.5px; }
+.rf-esign { font-size: 9px; color: var(--rf-muted); font-style: italic; margin-top: 8px; text-align: left; }
+
+.rf-approval { margin-top: 58px; }
+.rf-approval-row { display: flex; gap: 20px; margin-bottom: 40px; }
+.rf-approval-label { width: 160px; flex-shrink: 0; font-size: 11px; padding-top: 4px; }
+.rf-approval-slots { flex: 1; display: flex; flex-direction: column; gap: 38px; max-width: 330px; }
+.rf-slot { text-align: center; }
+.rf-slot-rule { border-bottom: 1px solid var(--rf-line); height: 16px; }
+.rf-slot-name { font-weight: 700; font-size: 11px; border-bottom: 1px solid var(--rf-line); padding-bottom: 1px; }
+.rf-slot-title { font-size: 11px; margin-top: 2px; }
+
+/* ─── THE PORTAL'S OWN FOOTER ─── */
+.rf-stub { margin-top: 38px; border: 2px solid var(--rf-line); }
+.rf-stub-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 5px 8px; border-bottom: 1px solid var(--rf-line);
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; background: #f2f2f2;
+}
+.rf-stub-status { padding: 1px 8px; border: 1px solid currentColor; border-radius: 9px; font-size: 9.5px; }
+.rf-status-pending  { color: #8a5a00; }
+.rf-status-approved { color: #106b3f; }
+.rf-status-claimed  { color: #14508c; }
+.rf-status-rejected { color: #a61b1b; }
+.rf-status-cancelled { color: #4b5563; }
+.rf-stub-table { margin: 0; font-size: 10px; }
+.rf-stub-table .rf-cell { border: none; border-bottom: 1px solid #999; border-right: 1px solid #999; padding: 5px 7px; }
+.rf-stub-table tr:last-child .rf-cell { border-bottom: none; }
+.rf-stub-table .rf-cell:last-child { border-right: none; }
+.rf-stub-table .rf-label { font-size: 9px; }
+.rf-stub-table .rf-fill { font-size: 10px; }
+.rf-stub-foot { padding: 5px 8px; border-top: 1px solid var(--rf-line); font-size: 8.5px; color: var(--rf-muted); font-style: italic; }
+
+/* A closed request says so across the sheet, so a stale printout is obvious. */
+.rf-watermark {
+    position: absolute; top: 46%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-24deg);
+    font-size: 78px; font-weight: 700; letter-spacing: 0.06em;
+    opacity: 0.09; white-space: nowrap; pointer-events: none; user-select: none;
+}
+.rf-watermark-pending, .rf-watermark-approved { display: none; }
+.rf-watermark-rejected  { color: #a61b1b; }
+.rf-watermark-claimed   { color: #14508c; }
+.rf-watermark-cancelled { color: #4b5563; }
+
+/* ─── PRINT ─── */
+@media print {
+    @page { size: A4; margin: 10mm; }
+    .rf-doc { width: auto; gap: 0; transform: none !important; }
+    .rf-page {
+        width: auto; min-height: 0; padding: 0;
+        box-shadow: none; page-break-after: always; break-after: page;
+    }
+    .rf-page:last-child { page-break-after: auto; break-after: auto; }
+    .rf-watermark { opacity: 0.12; }
+    .rf-stub-head { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

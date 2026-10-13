@@ -1,0 +1,119 @@
+/*
+ * Phone behaviour shared by every page — the things that are the same whether
+ * the student is on an iPhone or an Android, and that the per-page inline CSS
+ * kept getting wrong. Link it LAST in <head>, after the page's own <style> and
+ * after student_mobile.css / registrar_mobile.css, so it settles ties.
+ *
+ * Deliberately small: it fixes behaviour (zoom, tap, scroll, notch), never
+ * layout. Each page's own look, and the drawer in the two mobile sheets, is
+ * left alone.
+ */
+
+/* iOS inflates text in landscape unless this is set; Android ignores it. */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* A grey flash on every tap looks broken on Android; iOS needs the same hint. */
+* {
+    -webkit-tap-highlight-color: rgba(15, 23, 42, 0.08);
+}
+
+/* Removes the 300ms wait before a tap registers, and stops a double tap on a
+   button from zooming the page. Pinch zoom on the page itself still works — the
+   viewport is never locked, because that would break accessibility zoom. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role="button"],
+.nav-item,
+.nav-link,
+.btn {
+    touch-action: manipulation;
+}
+
+/* Safari zooms the whole page in when a focused field is under 16px. Every text
+   field is therefore 16px on phones and tablets; checkboxes, radios and ranges
+   keep their own size. */
+@media (max-width: 1024px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    select,
+    textarea {
+        font-size: 16px;
+    }
+
+    /* A file picker's button can be wider than its column on Android. */
+    input[type="file"] {
+        max-width: 100%;
+    }
+}
+
+/* Nothing may push the page sideways: media scales, and wide tables scroll
+   inside their own box with momentum instead of dragging the layout with them. */
+img,
+svg,
+video,
+canvas,
+iframe {
+    max-width: 100%;
+}
+
+/* Only the wrappers that exist to scroll. `.table-card` is deliberately left
+   out: it is a card whose table re-stacks into rows on a phone, so giving it a
+   scrollbar would fight that. */
+.table-responsive,
+.table-wrap,
+.table-scroll,
+.report-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+@media (max-width: 1024px) {
+    /* Any remaining overflow is clipped rather than left to scroll the page
+       sideways — a common complaint on small Android screens. */
+    body {
+        overflow-x: hidden;
+    }
+}
+
+/* A fixed drawer measured in vh is cut off on iOS, where the address bar and
+   the toolbar are counted in but then slide away; dvh follows them. Only
+   browsers that understand dvh are affected, so nothing else changes. */
+@supports (height: 100dvh) {
+    @media (max-width: 1024px) {
+        .sidebar {
+            height: 100dvh;
+        }
+    }
+}
+
+/* The notch and the home indicator: the fixed top bar keeps its contents clear
+   of the rounded corners in landscape, and the drawer's last item stays above
+   the home indicator. */
+@media (max-width: 1024px) {
+    .mobile-appbar {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+    }
+
+    .sidebar {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* A tap target below ~44px is hard to hit on a phone; these are the controls
+   the portal uses everywhere. */
+@media (max-width: 1024px) {
+    .mobile-toggle,
+    .mobile-appbar .mobile-toggle {
+        min-width: 42px;
+        min-height: 42px;
+    }
+}

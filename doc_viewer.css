@@ -1,0 +1,58 @@
+/*
+ * Document viewer modal (images + PDFs with zoom), used by checklist.php and my_document.php.
+ * Pair with doc_viewer.js. Uses the page's --primary-color.
+ */
+.doc-viewer { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.doc-viewer[hidden] { display: none; }
+.doc-viewer-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.2s ease; }
+.doc-viewer-dialog { position: relative; width: 100%; max-width: 980px; height: min(90vh, 920px); background: #fff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; overflow: hidden; opacity: 0; transform: translateY(12px) scale(0.98); transition: opacity 0.22s ease, transform 0.22s ease; }
+.doc-viewer.open .doc-viewer-backdrop { opacity: 1; }
+.doc-viewer.open .doc-viewer-dialog { opacity: 1; transform: none; }
+body.viewer-open { overflow: hidden; }
+
+.doc-viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.doc-viewer-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.doc-viewer-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(26, 54, 93, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+.doc-viewer-titles { min-width: 0; }
+.doc-viewer-titles h3 { margin: 0; font-size: 16px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-viewer-titles p { margin: 2px 0 0; font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-viewer-header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.doc-viewer-icon-btn { width: 40px; height: 40px; border-radius: 10px; border: none; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; font-size: 15px; transition: background 0.2s, color 0.2s; }
+.doc-viewer-icon-btn:hover { background: #e2e8f0; color: #0f172a; }
+.doc-viewer-close:hover { background: #fee2e2; color: #dc2626; }
+.doc-viewer-dialog:focus, .doc-viewer-dialog :focus:not(:focus-visible) { outline: none; }
+.doc-viewer-stage.frame-mode { overflow: hidden; scrollbar-gutter: auto; }
+.doc-viewer-icon-btn:focus-visible, .doc-viewer-tool:focus-visible, .doc-viewer-zoom-level:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+.doc-viewer-stage { position: relative; flex: 1; min-height: 0; display: flex; overflow: auto; background: #e2e8f0; overscroll-behavior: contain; touch-action: pan-x pan-y; scrollbar-gutter: stable; outline: none; }
+.doc-viewer-stage.can-pan { cursor: grab; }
+.doc-viewer-stage.panning { cursor: grabbing; user-select: none; }
+.doc-viewer-content { margin: auto; padding: 16px; display: flex; flex-direction: column; align-items: stretch; gap: 16px; flex-shrink: 0; }
+.doc-viewer-content img, .doc-viewer-content canvas { display: block; width: 100%; height: auto; background: #fff; border-radius: 4px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18); user-select: none; -webkit-user-drag: none; }
+.doc-viewer-content.is-frame { width: 100% !important; margin: 0; padding: 0; }
+.doc-viewer-content.is-frame iframe { flex: 1; width: 100%; border: none; background: #fff; }
+.doc-viewer-status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; color: #475569; font-size: 14px; text-align: center; pointer-events: none; }
+.doc-viewer-status[hidden] { display: none; }
+.doc-viewer-status > i { font-size: 30px; color: var(--primary-color); }
+.doc-viewer-status .fa-triangle-exclamation { color: #dc2626; }
+.doc-viewer-status-link { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; background: var(--primary-color); color: #fff; text-decoration: none; font-weight: 600; }
+
+.doc-viewer-toolbar { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; border-top: 1px solid #e2e8f0; background: #fff; flex-shrink: 0; }
+.doc-viewer-tool, .doc-viewer-zoom-level { height: 40px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; border-radius: 10px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s, border-color 0.2s; }
+.doc-viewer-tool { width: 44px; font-size: 16px; }
+.doc-viewer-zoom-level { min-width: 76px; padding: 0 12px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.doc-viewer-tool:hover:not(:disabled), .doc-viewer-zoom-level:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
+.doc-viewer-tool:disabled, .doc-viewer-zoom-level:disabled { opacity: 0.4; cursor: not-allowed; }
+.doc-viewer-divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
+.doc-viewer-hint { margin-left: 10px; font-size: 12px; color: #94a3b8; }
+
+@media (max-width: 640px) {
+    .doc-viewer { padding: 0; }
+    .doc-viewer-dialog { max-width: none; height: 100%; height: 100dvh; border-radius: 0; }
+    .doc-viewer-header { padding: 10px 10px 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); }
+    .doc-viewer-content { padding: 10px; gap: 10px; }
+    .doc-viewer-toolbar { gap: 8px; padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+    .doc-viewer-tool { width: 50px; height: 46px; font-size: 17px; }
+    .doc-viewer-zoom-level { height: 46px; }
+    .doc-viewer-hint { display: none; }
+}

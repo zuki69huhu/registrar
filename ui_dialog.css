@@ -1,0 +1,158 @@
+/*
+ * The portal's own confirm/alert box, in place of the browser's grey one.
+ * Pairs with ui_dialog.js, which injects the markup, so a page only links these
+ * two files. Colours are tokens on .uid, and .uid-dark repaints it for the
+ * registrar's dark pages — the script picks the theme from the page itself.
+ */
+
+.uid {
+    --uid-backdrop: rgba(15, 23, 42, 0.55);
+    --uid-surface: #ffffff;
+    --uid-text: #0f172a;
+    --uid-muted: #64748b;
+    --uid-border: #e2e8f0;
+    --uid-control: #f1f5f9;
+    --uid-control-text: #334155;
+    --uid-accent: #1a365d;
+    --uid-accent-text: #ffffff;
+
+    position: fixed;
+    inset: 0;
+    z-index: 100000;           /* above every other layer in the project (max 99999) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.16s ease;
+}
+
+.uid[hidden] { display: none; }
+.uid.is-open { opacity: 1; }
+
+.uid-dark {
+    --uid-backdrop: rgba(2, 6, 23, 0.7);
+    --uid-surface: #1e293b;
+    --uid-text: #f1f5f9;
+    --uid-muted: #94a3b8;
+    --uid-border: rgba(255, 255, 255, 0.08);
+    --uid-control: rgba(255, 255, 255, 0.08);
+    --uid-control-text: #e2e8f0;
+    --uid-accent: #c9a227;
+    --uid-accent-text: #0f172a;
+}
+
+.uid-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--uid-backdrop);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+
+.uid-box {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    padding: 26px 24px 20px;
+    border-radius: 18px;
+    border: 1px solid var(--uid-border);
+    background: var(--uid-surface);
+    color: var(--uid-text);
+    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.28);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    text-align: center;
+    transform: translateY(8px) scale(0.98);
+    transition: transform 0.16s ease;
+}
+
+.uid.is-open .uid-box { transform: none; }
+.uid-box:focus { outline: none; }
+
+.uid-icon {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: rgba(26, 54, 93, 0.1);
+    color: var(--uid-accent);
+}
+
+.uid-danger .uid-icon { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.uid-success .uid-icon { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.uid-info .uid-icon { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+
+.uid-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.uid-message {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--uid-muted);
+    overflow-wrap: anywhere;
+}
+
+.uid-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.uid-btn {
+    flex: 1;
+    min-height: 44px;            /* a comfortable tap target on a phone */
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    font: 600 14.5px/1 'Inter', system-ui, sans-serif;
+    cursor: pointer;
+    transition: filter 0.15s, background 0.15s;
+}
+
+.uid-btn:hover { filter: brightness(1.06); }
+.uid-btn:focus-visible { outline: 2px solid var(--uid-accent); outline-offset: 2px; }
+
+.uid-cancel {
+    background: var(--uid-control);
+    color: var(--uid-control-text);
+    border-color: var(--uid-border);
+}
+
+.uid-ok {
+    background: var(--uid-accent);
+    color: var(--uid-accent-text);
+}
+
+.uid-danger .uid-ok { background: #dc2626; color: #ffffff; }
+.uid-success .uid-ok { background: #10b981; color: #ffffff; }
+
+/* An alert has one button, which should not stretch across the whole box. */
+.uid-single .uid-actions { justify-content: center; }
+.uid-single .uid-btn { flex: 0 1 180px; }
+
+@media (max-width: 480px) {
+    .uid { padding: 16px; align-items: flex-end; }
+    .uid-box {
+        padding: 22px 18px 18px;
+        border-radius: 20px;
+        padding-bottom: max(18px, env(safe-area-inset-bottom));
+    }
+    /* The confirming button sits on top, where the thumb is. */
+    .uid-actions { flex-direction: column-reverse; }
+    .uid-single .uid-btn { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .uid, .uid-box { transition: none; }
+}

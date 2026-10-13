@@ -1,0 +1,25 @@
+# Uploaded files are data, never code: no script in here runs except the
+# restore script.
+<FilesMatch "\.(php|phtml|phar|php\d)$">
+    Require all denied
+</FilesMatch>
+<Files "_restore.php">
+    Require all granted
+</Files>
+
+# A file missing from disk (project copied to another computer, DB restored
+# from a backup) is rebuilt from the database copy by _restore.php.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.+)$ _restore.php?f=$1 [L,B,QSA]
+</IfModule>
+
+# Every upload has a unique timestamped name and never changes, so phones and
+# laptops may keep it cached instead of downloading it again.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(jpe?g|png|webp|gif|pdf)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
