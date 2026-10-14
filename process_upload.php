@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'db.php';
-require_once 'upload_store_helper.php';
+require_once 'includes/db.php';
+require_once 'includes/upload_store_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['user_id'])) {
     header("Location: index.php"); exit;

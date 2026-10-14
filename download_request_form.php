@@ -14,9 +14,9 @@
  */
 
 session_start();
-require_once 'db.php';
-require_once 'request_config.php';
-require_once 'name_helper.php';
+require_once 'includes/db.php';
+require_once 'includes/request_config.php';
+require_once 'includes/name_helper.php';
 require_once 'vendor/autoload.php';
 
 $role    = $_SESSION['role'] ?? '';
@@ -478,9 +478,9 @@ $declared   = $data['declarations'] ?? [];
 $transferee = !empty($data['is_transferee']);
 
 // The institution's own letterhead logo, falling back to the shipped one.
-$logo_name = basename($form['letterhead']['logo'] ?? 'logo.jpg');
-$logo = is_file(__DIR__ . '/' . $logo_name) ? __DIR__ . '/' . $logo_name
-      : (is_file(__DIR__ . '/logo.jpg') ? __DIR__ . '/logo.jpg' : null);
+$logo_name = basename($form['letterhead']['logo'] ?? 'assets/img/logo.jpg');
+$logo = is_file(__DIR__ . '/assets/img/' . $logo_name) ? __DIR__ . '/assets/img/' . $logo_name
+      : (is_file(__DIR__ . '/assets/img/logo.jpg') ? __DIR__ . '/assets/img/logo.jpg' : null);
 $pdf = new RequestFormPdf($logo);
 $pdf->head = $form['letterhead'] ?? [];
 // The heading printed on the sheet, which may differ from how the portal

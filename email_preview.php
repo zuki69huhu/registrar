@@ -6,7 +6,7 @@
  * 
  * This file is for development/testing only.
  */
-require_once __DIR__ . '/email_template.php';
+require_once __DIR__ . '/includes/email_template.php';
 
 // Sample data to preview
 $student_name = 'Juan Dela Cruz';
@@ -26,18 +26,18 @@ All requests filed on that day will be processed on Monday. Thank you.";
 $html = buildEmailTemplate($student_name, $message, $type, $subject, $registrar_name, $institution, $variant);
 
 // The same seal sendEmail() embeds.
-$logo_file = 'logo.jpg';
-if (file_exists(__DIR__ . '/logo_email.png')) {
-    $logo_file = 'logo_email.png';
-} elseif (file_exists(__DIR__ . '/isaplogo_glow.png')) {
+$logo_file = 'assets/img/logo.jpg';
+if (file_exists(__DIR__ . '/assets/img/logo_email.png')) {
+    $logo_file = 'assets/img/logo_email.png';
+} elseif (file_exists(__DIR__ . '/assets/img/isaplogo_glow.png')) {
     $logo_file = 'isaplogo_glow.png';
-} elseif (file_exists(__DIR__ . '/logo_glow.png')) {
+} elseif (file_exists(__DIR__ . '/assets/img/logo_glow.png')) {
     $logo_file = 'logo_glow.png';
-} elseif (file_exists(__DIR__ . '/isaplogo.png')) {
+} elseif (file_exists(__DIR__ . '/assets/img/isaplogo.png')) {
     $logo_file = 'isaplogo.png';
-} elseif (file_exists(__DIR__ . '/logo.png')) {
-    $logo_file = 'logo.png';
-} elseif (file_exists(__DIR__ . '/isaplogo.jpg')) {
+} elseif (file_exists(__DIR__ . '/assets/img/logo.png')) {
+    $logo_file = 'assets/img/logo.png';
+} elseif (file_exists(__DIR__ . '/assets/img/isaplogo.jpg')) {
     $logo_file = 'isaplogo.jpg';
 }
 

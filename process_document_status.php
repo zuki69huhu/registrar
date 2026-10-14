@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once 'db.php';
-require_once 'upload_config.php';
-require_once 'notification_helper.php';
-require_once 'audit_log_helper.php';
+require_once 'includes/db.php';
+require_once 'includes/upload_config.php';
+require_once 'includes/notification_helper.php';
+require_once 'includes/audit_log_helper.php';
 
 // Access control: Only allow logged-in registrars
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'registrar') {

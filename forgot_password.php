@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'db.php';
-require_once 'config.php';
+require_once 'includes/db.php';
+require_once 'includes/config.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -92,9 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .error { color: #ef4444; font-size: 14px; margin-bottom: 15px; }
         .back { display: block; text-align: center; margin-top: 20px; color: #3b82f6; text-decoration: none; font-size: 14px; }
     </style>
-    <link rel="stylesheet" href="mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="ui_dialog.css?v=1">
-    <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
+    <script src="assets/js/ui_dialog.js?v=1" defer></script>
 </head>
 <body>
     <div class="card">

@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'db.php';
-require_once 'notification_helper.php';
-require_once 'audit_log_helper.php';
+require_once 'includes/db.php';
+require_once 'includes/notification_helper.php';
+require_once 'includes/audit_log_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SESSION['role'] === 'registrar') {
     $title = trim($_POST['title']);

@@ -1,0 +1,18 @@
+# Real credentials stay on each machine; copy includes/config.example.php.
+/includes/config.php
+
+# Throwaway test script with SMTP credentials.
+/tools/smtptest.php
+
+# Student uploads are personal data: kept on disk and in the database
+# (upload_store_helper.php), never in git. The two files that make the
+# folder work are tracked.
+/uploads/*
+!/uploads/.htaccess
+!/uploads/_restore.php
+
+# Editor and OS clutter
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

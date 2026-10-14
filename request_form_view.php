@@ -11,9 +11,9 @@
  */
 
 session_start();
-require_once 'db.php';
-require_once 'request_config.php';
-require_once 'request_form_render.php';
+require_once 'includes/db.php';
+require_once 'includes/request_config.php';
+require_once 'includes/request_form_render.php';
 
 $mode = $_GET['mode'] ?? 'page';
 if (!in_array($mode, ['page', 'fragment', 'print'], true)) $mode = 'page';
@@ -106,7 +106,7 @@ $title = $form['title'] . ' ' . $ref;
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link rel="stylesheet" href="request_form.css?v=6">
+    <link rel="stylesheet" href="assets/css/request_form.css?v=6">
     <style>
         body { margin: 0; background: #e2e8f0; font-family: Arial, Helvetica, sans-serif; }
         .sheet-wrap { display: flex; justify-content: center; padding: 24px 16px 48px; }
@@ -153,7 +153,7 @@ $title = $form['title'] . ' ' . $ref;
     </div>
     <div class="sheet-wrap"><div class="sheet-fit" id="sheetFit"><?= $document ?></div></div>
 
-    <script src="request_form.js?v=1"></script>
+    <script src="assets/js/request_form.js?v=1"></script>
     <script>
         // Scale the sheet down to whatever width the screen actually has. The
         // wrapper is resized to the scaled box so the page scrolls normally.

@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once 'includes/db.php';
 require_once 'vendor/autoload.php';
-require_once 'upload_store_helper.php';
+require_once 'includes/upload_store_helper.php';
 
 use setasign\Fpdi\Fpdi;
 

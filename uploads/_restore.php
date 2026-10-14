@@ -4,8 +4,8 @@
  * copy (upload_store_helper.php). uploads/.htaccess sends every request for a
  * file that does not exist here; once written back, Apache serves it directly.
  */
-require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../upload_store_helper.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/upload_store_helper.php';
 
 $rel = str_replace('\\', '/', (string)($_GET['f'] ?? ''));
 if ($rel === '' || strpos($rel, '..') !== false || $rel[0] === '/' || $rel[0] === '_') {

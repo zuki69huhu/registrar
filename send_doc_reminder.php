@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'db.php';
-require_once 'name_helper.php';
-require_once 'notification_helper.php';
+require_once 'includes/db.php';
+require_once 'includes/name_helper.php';
+require_once 'includes/notification_helper.php';
 
 header('Content-Type: application/json');
 

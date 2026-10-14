@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db.php'; // Assuming db.php defines $mysqli
+require_once 'includes/db.php'; // Assuming db.php defines $mysqli
 
 // Access control: Only allow users with the 'student' role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
@@ -119,8 +119,8 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
-    <link rel="stylesheet" href="theme_mode.css?v=9">
+    <script src="assets/js/theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="assets/css/theme_mode.css?v=9">
     <title>Student Dashboard - Registrar System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -660,13 +660,13 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
-    <link rel="stylesheet" href="student_mobile.css?v=1">
-    <link rel="stylesheet" href="student_sidebar.css?v=1">
-    <link rel="stylesheet" href="mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="ui_dialog.css?v=1">
-    <script src="ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="student_profile.css?v=9">
-    <script src="student_profile.js?v=3" defer></script>
+    <link rel="stylesheet" href="assets/css/student_mobile.css?v=1">
+    <link rel="stylesheet" href="assets/css/student_sidebar.css?v=1">
+    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
+    <script src="assets/js/ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="assets/css/student_profile.css?v=9">
+    <script src="assets/js/student_profile.js?v=3" defer></script>
 </head>
 <body class="student-shell">
 <div class="dashboard">
@@ -676,7 +676,7 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
             <i class="fas fa-bars"></i>
         </button>
         <a href="student_dashboard.php" class="mobile-appbar-brand">
-            <img src="logo.jpg" alt="">
+            <img src="assets/img/logo.jpg" alt="">
             <span>Student Portal</span>
         </a>
     </header>
@@ -687,7 +687,7 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
         <div class="sidebar-header">
             <div class="logo-area">
                 <div class="logo-icon">
-                    <img src="logo.jpg" alt="Logo"  style="width: 100%; height: 100%; object-fit: contain;">
+                    <img src="assets/img/logo.jpg" alt="Logo"  style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="logo-text">Student Portal</div>
             </div>

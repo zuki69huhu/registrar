@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once 'includes/db.php';
 
 $email = $_SESSION['email'] ?? null;
 if (!$email) {
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($update_stmt->execute()) {
                     error_log("Database updated successfully for user: " . $email);
-                    require_once 'audit_log_helper.php';
+                    require_once 'includes/audit_log_helper.php';
                     logAudit($mysqli, $user['id'], 'EMAIL_VERIFIED', 'Verified email address with OTP after registration.', $user['id']);
                     
                     unset($_SESSION['email']); // Linisin ang verification session
@@ -124,9 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             button { width: 100%; margin: 12px 0 0; }
         }
     </style>
-    <link rel="stylesheet" href="mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="ui_dialog.css?v=1">
-    <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
+    <script src="assets/js/ui_dialog.js?v=1" defer></script>
 </head>
 <body>
     <div class="otp-box">

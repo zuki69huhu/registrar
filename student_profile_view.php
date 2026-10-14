@@ -8,18 +8,18 @@
  *            page uses. A student can never name someone else: the id is
  *            ignored for them.
  *   ?status=1  JSON {"missing": N} for the signed-in student: how many required
- *            answers their profile still lacks. student_profile.js turns it
+ *            answers their profile still lacks. assets/js/student_profile.js turns it
  *            into the red badge on their picture.
  *
- * student_profile.js fetches this the first time a profile is opened and
+ * assets/js/student_profile.js fetches this the first time a profile is opened and
  * injects it into the modal, so no page pays for a profile until it is
  * actually wanted. Nothing here can be edited - the form lives in
  * student_settings.php. Every value goes through $e(), because the fragment is
  * injected with innerHTML.
  */
 session_start();
-require_once 'db.php';
-require_once 'profile_config.php';
+require_once 'includes/db.php';
+require_once 'includes/profile_config.php';
 
 $want_status = isset($_GET['status']);
 header('Content-Type: ' . ($want_status ? 'application/json' : 'text/html') . '; charset=utf-8');

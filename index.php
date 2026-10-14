@@ -817,9 +817,9 @@
       .brand-panel p { display: none; }
     }
   </style>
-    <link rel="stylesheet" href="mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="ui_dialog.css?v=1">
-    <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
+    <script src="assets/js/ui_dialog.js?v=1" defer></script>
 </head>
 <body>
   <script>
@@ -847,7 +847,7 @@
     <!-- Left Panel - Branding -->
     <div class="brand-panel">
       <div class="logo">
-        <img src="logo.jpg" alt="Logo"  class="logo-img" onerror="this.style.display='none'">
+        <img src="assets/img/logo.jpg" alt="Logo"  class="logo-img" onerror="this.style.display='none'">
       </div>
       <h1>Registrar Office</h1>
       <p>Secure document repository and monitoring system. Manage, track, and monitor all official records with enterprise-grade security.</p>

@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once "db.php"; // this defines $mysqli (MySQLi)
-require_once "audit_log_helper.php";
+require_once "includes/db.php"; // this defines $mysqli (MySQLi)
+require_once "includes/audit_log_helper.php";
 
 // Only handle POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -54,7 +54,7 @@ if ($user && password_verify($password, $user['password'])) {
     $_SESSION['email']   = $user['email'];
     $_SESSION['role']    = $user['role'];
 
-    require_once "audit_log_helper.php";
+    require_once "includes/audit_log_helper.php";
     logAudit($mysqli, $user['id'], 'LOGIN', 'User logged in successfully.');
 
     // --- Manage Email History for Login Suggestions ---
