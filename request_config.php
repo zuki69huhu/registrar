@@ -222,8 +222,8 @@ function getRequestFormsForInstitution($institution) {
         'description' => 'Ask the registrar to write to the school you last attended for your Form 137-A — your permanent record from that school.',
     ];
     $otr_request = [
-        'title'       => 'Request for Transcript of Records (OTR)',
-        'short'       => 'OTR',
+        'title'       => 'Request for Transcript of Records (TOR)',
+        'short'       => 'TOR',
         'icon'        => 'fa-scroll',
         'description' => 'Ask the registrar to write to the college you last attended for your Official Transcript of Records.',
     ];
@@ -348,9 +348,9 @@ function getGraduationFormSections() {
                 ['name' => 'last_name',         'label' => 'Last Name',          'type' => 'text',     'required' => true,  'autofill' => 'last_name',      'span' => 1],
                 ['name' => 'first_name',        'label' => 'First Name',         'type' => 'text',     'required' => true,  'autofill' => 'first_name',     'span' => 1],
                 ['name' => 'middle_name',       'label' => 'Middle Name',        'type' => 'text',     'required' => false, 'autofill' => 'middle_name',    'span' => 1],
-                ['name' => 'date_of_birth',     'label' => 'Date of Birth',      'type' => 'date',     'required' => true,  'span' => 1],
-                ['name' => 'sex',               'label' => 'Sex',                'type' => 'select',   'required' => true,  'span' => 1, 'options' => ['Male', 'Female']],
-                ['name' => 'civil_status',      'label' => 'Civil Status',       'type' => 'select',   'required' => true,  'span' => 1, 'options' => ['Single', 'Married', 'Widowed', 'Separated']],
+                ['name' => 'date_of_birth',     'label' => 'Date of Birth',      'type' => 'date',     'required' => true,  'autofill' => 'birth_date',     'span' => 1],
+                ['name' => 'sex',               'label' => 'Sex',                'type' => 'select',   'required' => true,  'autofill' => 'sex',            'span' => 1, 'options' => ['Male', 'Female']],
+                ['name' => 'civil_status',      'label' => 'Civil Status',       'type' => 'select',   'required' => true,  'autofill' => 'civil_status',   'span' => 1, 'options' => ['Single', 'Married', 'Widowed', 'Separated']],
                 ['name' => 'permanent_address', 'label' => 'Permanent Address',  'type' => 'textarea', 'required' => true,  'autofill' => 'address',        'span' => 3],
                 ['name' => 'contact_number',    'label' => 'Contact Number',     'type' => 'tel',      'required' => true,  'autofill' => 'contact_number', 'span' => 1],
                 ['name' => 'email',             'label' => 'Email Address',      'type' => 'email',    'required' => true,  'autofill' => 'email',          'span' => 2],
@@ -362,14 +362,14 @@ function getGraduationFormSections() {
             'icon'  => 'fa-school',
             'note'  => 'College is only for transferees and graduates of any course. Leave it blank if it does not apply to you.',
             'fields' => [
-                ['name' => 'elementary',       'label' => 'Elementary',       'type' => 'text', 'required' => true,  'span' => 2],
-                ['name' => 'elementary_year',  'label' => 'Year Graduated',   'type' => 'year', 'required' => true,  'span' => 1],
-                ['name' => 'junior_high',      'label' => 'Junior High School', 'type' => 'text', 'required' => true, 'span' => 2],
-                ['name' => 'junior_high_year', 'label' => 'Year Graduated',   'type' => 'year', 'required' => true,  'span' => 1],
-                ['name' => 'senior_high',      'label' => 'Senior High School', 'type' => 'text', 'required' => true, 'span' => 2],
-                ['name' => 'senior_high_year', 'label' => 'Year Graduated',   'type' => 'year', 'required' => true,  'span' => 1],
-                ['name' => 'college',          'label' => 'College (transferees & graduates of any course)', 'type' => 'text', 'required' => false, 'span' => 2],
-                ['name' => 'college_year',     'label' => 'Year Ended',       'type' => 'year', 'required' => false, 'span' => 1],
+                ['name' => 'elementary',       'label' => 'Elementary',       'type' => 'text', 'required' => true,  'autofill' => 'edu_elementary_school', 'span' => 2],
+                ['name' => 'elementary_year',  'label' => 'Year Graduated',   'type' => 'year', 'required' => true,  'autofill' => 'edu_elementary_year', 'span' => 1],
+                ['name' => 'junior_high',      'label' => 'Junior High School', 'type' => 'text', 'required' => true, 'autofill' => 'edu_junior_high_school', 'span' => 2],
+                ['name' => 'junior_high_year', 'label' => 'Year Graduated',   'type' => 'year', 'required' => true,  'autofill' => 'edu_junior_high_year', 'span' => 1],
+                ['name' => 'senior_high',      'label' => 'Senior High School', 'type' => 'text', 'required' => true, 'autofill' => 'edu_senior_high_school', 'span' => 2],
+                ['name' => 'senior_high_year', 'label' => 'Year Graduated',   'type' => 'year', 'required' => true,  'autofill' => 'edu_senior_high_year', 'span' => 1],
+                ['name' => 'college',          'label' => 'College (transferees & graduates of any course)', 'type' => 'text', 'required' => false, 'autofill' => 'edu_college_school', 'span' => 2],
+                ['name' => 'college_year',     'label' => 'Year Ended',       'type' => 'year', 'required' => false, 'autofill' => 'edu_college_year', 'span' => 1],
             ],
         ],
     ];
@@ -432,8 +432,8 @@ function getForm007Sections() {
             'icon'  => 'fa-school',
             'note'  => 'The registrar addresses the letter to this school, so write the name and address exactly as they should appear.',
             'fields' => [
-                ['name' => 'school_name',    'label' => 'Name of School', 'type' => 'text',     'required' => true, 'span' => 3],
-                ['name' => 'school_address', 'label' => 'School Address', 'type' => 'textarea', 'required' => true, 'span' => 3],
+                ['name' => 'school_name',    'label' => 'Name of School', 'type' => 'text',     'required' => true, 'autofill' => 'prev_school_name',    'span' => 3],
+                ['name' => 'school_address', 'label' => 'School Address', 'type' => 'textarea', 'required' => true, 'autofill' => 'prev_school_address', 'span' => 3],
             ],
         ],
         [
@@ -443,8 +443,8 @@ function getForm007Sections() {
             'note'  => 'This is the NAME / STRAND-COURSE / SCHOOL YEAR row printed in the letter.',
             'fields' => [
                 ['name' => 'student_name',  'label' => 'Name',           'type' => 'text', 'required' => true, 'autofill' => 'full_name', 'span' => 2],
-                ['name' => 'strand_course', 'label' => 'Strand / Course', 'type' => 'text', 'required' => true, 'autofill' => 'course',    'span' => 1],
-                ['name' => 'school_year',   'label' => 'School Year at that school', 'type' => 'text', 'required' => true, 'span' => 1, 'placeholder' => 'e.g. 2022-2023'],
+                ['name' => 'strand_course', 'label' => 'Strand / Course', 'type' => 'text', 'required' => true, 'autofill' => 'prev_strand_course', 'span' => 1],
+                ['name' => 'school_year',   'label' => 'School Year at that school', 'type' => 'text', 'required' => true, 'autofill' => 'prev_school_year', 'span' => 1, 'placeholder' => 'e.g. 2022-2023'],
             ],
         ],
         [
@@ -474,8 +474,8 @@ function getNstpSections() {
             'icon'  => 'fa-school-flag',
             'note'  => 'The registrar addresses the letter to this college, and its name and address are printed in the table too.',
             'fields' => [
-                ['name' => 'school_name',    'label' => 'Name of College', 'type' => 'text',     'required' => true, 'span' => 3],
-                ['name' => 'school_address', 'label' => 'College Address', 'type' => 'textarea', 'required' => true, 'span' => 3],
+                ['name' => 'school_name',    'label' => 'Name of College', 'type' => 'text',     'required' => true, 'autofill' => 'prev_school_name',    'span' => 3],
+                ['name' => 'school_address', 'label' => 'College Address', 'type' => 'textarea', 'required' => true, 'autofill' => 'prev_school_address', 'span' => 3],
             ],
         ],
         [
@@ -508,6 +508,67 @@ function getForm007Options() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Label, colour and icon for a status, so every page badges it the same way. */
+/**
+ * Everything a form's `autofill` keys can be filled from, for one form.
+ *
+ * $user is the student's `users` row (plus `full_name`); $profile is their
+ * decoded Student Profile (users.profile_data, see profile_config.php). The
+ * profile adds:
+ *
+ *   birth_date, sex, civil_status
+ *   edu_<level>_school / edu_<level>_year   the school and the year it ended,
+ *                                           for elementary, junior_high,
+ *                                           senior_high and college
+ *   prev_school_name / _address / prev_strand_course / prev_school_year
+ *       the school the letter is written TO, which depends on the form: the
+ *       Form 137-A comes from the senior high school (junior high when no
+ *       senior high is on the profile), the transcript and the NSTP serial
+ *       number from the previous college.
+ *
+ * A key with nothing behind it is simply absent, and the field falls back to
+ * what the student typed the last time they filed that form.
+ */
+function requestAutofillData($user, $profile, $form_type) {
+    $data = $user;
+    $text = fn($value) => is_string($value) ? trim($value) : '';
+
+    foreach (['birth_date', 'sex', 'civil_status'] as $key) {
+        if ($text($profile[$key] ?? '') !== '') $data[$key] = $text($profile[$key]);
+    }
+
+    $education = is_array($profile['education'] ?? null) ? $profile['education'] : [];
+    foreach (['elementary', 'junior_high', 'senior_high', 'college'] as $level) {
+        $row = is_array($education[$level] ?? null) ? $education[$level] : [];
+        if ($text($row['school'] ?? '') !== '')  $data['edu_' . $level . '_school'] = $text($row['school']);
+        if ($text($row['year_to'] ?? '') !== '') $data['edu_' . $level . '_year']   = $text($row['year_to']);
+    }
+
+    // The school a letter is addressed to.
+    $from = null;
+    if ($form_type === 'form137') {
+        $from = $text($education['senior_high']['school'] ?? '') !== '' ? 'senior_high' : 'junior_high';
+    } elseif ($form_type === 'otr' || $form_type === 'nstp') {
+        $from = 'college';
+    }
+    $row = $from !== null && is_array($education[$from] ?? null) ? $education[$from] : [];
+    if ($text($row['school'] ?? '') !== '') {
+        $data['prev_school_name'] = $text($row['school']);
+        if ($text($row['address'] ?? '') !== '') $data['prev_school_address'] = $text($row['address']);
+        if ($text($row['extra'] ?? '') !== '')   $data['prev_strand_course']  = $text($row['extra']);
+        // "School Year at that school" is the last one attended there: 2023 -> 2022-2023.
+        $last = $text($row['year_to'] ?? '');
+        if (ctype_digit($last) && (int)$last > 1900) {
+            $data['prev_school_year'] = ((int)$last - 1) . '-' . $last;
+        }
+    }
+    // Form 007 used to offer the student's present course here; keep that when
+    // the profile has no strand or course for the earlier school.
+    if (empty($data['prev_strand_course']) && $form_type !== 'nstp' && $text($user['course'] ?? '') !== '') {
+        $data['prev_strand_course'] = $text($user['course']);
+    }
+    return $data;
+}
+
 function requestStatusMeta($status) {
     $map = [
         'pending'   => ['label' => 'Pending',        'student' => 'Waiting for registrar review', 'color' => '#f59e0b', 'icon' => 'fa-hourglass-half'],

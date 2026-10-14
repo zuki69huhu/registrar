@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once 'db.php';
+require_once 'profile_config.php';
+
+ensureProfileColumn($mysqli);
 
 // Access control: Only allow users with the 'student' role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
@@ -15,7 +18,7 @@ if (!$user_id) {
     exit;
 }
 
-$stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, student_id, email, profile_picture, year_level, course, institution, contact_number, address, section FROM users WHERE id = ?");
+$stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, student_id, email, profile_picture, year_level, course, institution, contact_number, address, section, profile_data FROM users WHERE id = ?");
 if (!$stmt) {
     $_SESSION['flash'] = "System error. Please try again later.";
     header("Location: index.php?tab=login"); exit;
@@ -45,6 +48,35 @@ $user_institution = $user_data['institution'] ?? '';
 $user_contact_number = $user_data['contact_number'] ?? '';
 $user_address = $user_data['address'] ?? '';
 $user_section = $user_data['section'] ?? '';
+$profile = decodeStudentProfile($user_data['profile_data'] ?? '');
+// From what is saved, not from a half-typed form that failed validation.
+$profile_missing = profileMissingFields($user_data, $profile);
+// Set by process_profile.php only on the save that completed the profile, and
+// read once, so the congratulations appear a single time.
+$profile_just_completed = !empty($_SESSION['profile_completed']) && !$profile_missing;
+unset($_SESSION['profile_completed']);
+
+// A save that failed validation comes back here with what the student typed,
+// so nothing has to be entered twice. The sidebar keeps showing the saved values.
+$form_year_level = $user_year_level;
+$form_section = $user_section;
+$form_course = $user_course;
+if (isset($_SESSION['profile_old']) && is_array($_SESSION['profile_old'])) {
+    $old = $_SESSION['profile_old'];
+    $form_year_level = $old['year_level'] ?? $form_year_level;
+    $form_section = $old['section'] ?? $form_section;
+    $form_course = $old['course'] ?? $form_course;
+    $user_contact_number = $old['contact_number'] ?? $user_contact_number;
+    $user_address = $old['address'] ?? $user_address;
+    if (is_array($old['profile'] ?? null)) $profile = $old['profile'];
+}
+$profile_errors = $_SESSION['profile_errors'] ?? [];
+$flash = $_SESSION['flash'] ?? '';
+$flash_type = $_SESSION['flash_type'] ?? 'success';
+unset($_SESSION['profile_old'], $_SESSION['profile_errors'], $_SESSION['flash'], $_SESSION['flash_type']);
+
+$profile_age = profileAge($profile['birth_date'] ?? '');
+$profile_max_year = (int)date('Y') + 1;
 
 $display_year_section = '';
 if (!empty($user_year_level)) {
@@ -68,6 +100,8 @@ if (empty($full_name)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Settings - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -491,8 +525,12 @@ if (empty($full_name)) {
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
+    <script src="address_picker.js?v=4" defer></script>
+    <script src="school_picker.js?v=1" defer></script>
 </head>
-<body class="student-shell">
+<body class="student-shell" data-profile-missing="<?= count($profile_missing) ?>">
 <div class="dashboard">
     <header class="mobile-appbar">
         <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Open menu">
@@ -595,16 +633,36 @@ if (empty($full_name)) {
             </div>
         </div>
 
-        <?php if (isset($_SESSION['flash'])): ?>
-            <div style="padding: 15px; background: #dcfce7; color: #15803d; border-radius: 10px; margin-bottom: 20px; font-weight: 500;">
-                <?= htmlspecialchars($_SESSION['flash']); unset($_SESSION['flash']); ?>
+        <?php if ($flash !== ''): ?>
+            <div class="pf-flash<?= $flash_type === 'error' ? ' is-error' : '' ?>" role="status">
+                <?= htmlspecialchars($flash) ?>
+                <?php if ($profile_errors): ?>
+                    <ul>
+                        <?php foreach ($profile_errors as $profile_error): ?>
+                            <li><?= htmlspecialchars($profile_error) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
-        <div class="card" style="margin-bottom: 24px;">
-            <div class="card-header">
+        <div class="card" id="edit-profile" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                 <h3><i class="fas fa-user-edit"></i> Edit Profile</h3>
+                <button type="button" class="pf-btn is-ghost" data-open-profile style="padding: 8px 14px; font-size: 13px;">
+                    <i class="fas fa-eye"></i> View my profile
+                </button>
             </div>
+            <?php if ($profile_missing): ?>
+                <div class="pf-missing" role="status">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <div>
+                        <strong>Your profile is not complete yet.</strong>
+                        <?= count($profile_missing) ?> required <?= count($profile_missing) === 1 ? 'detail is' : 'details are' ?> still missing
+                        (marked <span class="pf-req">*</span> below): <?= htmlspecialchars(implode(', ', $profile_missing)) ?>.
+                    </div>
+                </div>
+            <?php endif; ?>
             <form action="process_profile.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="current_profile_picture" value="<?= htmlspecialchars($user_profile_picture ?? '') ?>">
                 
@@ -619,11 +677,11 @@ if (empty($full_name)) {
                         <label class="form-label">Year Level</label>
                         <select name="year_level" class="form-select">
                             <option value="">Select Year Level...</option>
-                            <option value="1st Year" <?= $user_year_level === '1st Year' ? 'selected' : '' ?>>1st Year</option>
-                            <option value="2nd Year" <?= $user_year_level === '2nd Year' ? 'selected' : '' ?>>2nd Year</option>
-                            <option value="3rd Year" <?= $user_year_level === '3rd Year' ? 'selected' : '' ?>>3rd Year</option>
-                            <option value="4th Year" <?= $user_year_level === '4th Year' ? 'selected' : '' ?>>4th Year</option>
-                            <option value="Irregular" <?= $user_year_level === 'Irregular' ? 'selected' : '' ?>>Irregular</option>
+                            <option value="1st Year" <?= $form_year_level === '1st Year' ? 'selected' : '' ?>>1st Year</option>
+                            <option value="2nd Year" <?= $form_year_level === '2nd Year' ? 'selected' : '' ?>>2nd Year</option>
+                            <option value="3rd Year" <?= $form_year_level === '3rd Year' ? 'selected' : '' ?>>3rd Year</option>
+                            <option value="4th Year" <?= $form_year_level === '4th Year' ? 'selected' : '' ?>>4th Year</option>
+                            <option value="Irregular" <?= $form_year_level === 'Irregular' ? 'selected' : '' ?>>Irregular</option>
                         </select>
                     </div>
                     <div>
@@ -631,7 +689,7 @@ if (empty($full_name)) {
                         <select name="section" class="form-select">
                             <option value="">Select Section...</option>
                             <?php foreach (range('A', 'Z') as $letter): ?>
-                                <option value="<?= $letter ?>" <?= $user_section === (string)$letter ? 'selected' : '' ?>>Section <?= $letter ?></option>
+                                <option value="<?= $letter ?>" <?= $form_section === (string)$letter ? 'selected' : '' ?>>Section <?= $letter ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -648,263 +706,294 @@ if (empty($full_name)) {
                             <option value="">Select Course...</option>
                             <?php if ($user_institution === 'ISAP' || empty($user_institution)): ?>
                             <optgroup label="ISAP">
-                                <option value="BS Accountancy" <?= $user_course === 'BS Accountancy' ? 'selected' : '' ?>>BS Accountancy</option>
-                                <option value="BS Business administration" <?= $user_course === 'BS Business administration' ? 'selected' : '' ?>>BS Business Administration</option>
-                                <option value="BS Computer engineering" <?= $user_course === 'BS Computer engineering' ? 'selected' : '' ?>>BS Computer Engineering</option>
-                                <option value="BS Criminology" <?= $user_course === 'BS Criminology' ? 'selected' : '' ?>>BS Criminology</option>
-                                <option value="BS Custom Administration" <?= $user_course === 'BS Custom Administration' ? 'selected' : '' ?>>BS Custom Administration</option>
-                                <option value="BS Hospitality management" <?= $user_course === 'BS Hospitality management' ? 'selected' : '' ?>>BS Hospitality Management</option>
-                                <option value="BS Information Technology" <?= $user_course === 'BS Information Technology' ? 'selected' : '' ?>>BS Information Technology</option>
-                                <option value="BS Physical education" <?= $user_course === 'BS Physical education' ? 'selected' : '' ?>>BS Physical Education</option>
-                                <option value="BS Psychology" <?= $user_course === 'BS Psychology' ? 'selected' : '' ?>>BS Psychology</option>
-                                <option value="BS Secondary education" <?= $user_course === 'BS Secondary education' ? 'selected' : '' ?>>BS Secondary Education</option>
-                                <option value="BS Social work" <?= $user_course === 'BS Social work' ? 'selected' : '' ?>>BS Social Work</option>
-                                <option value="BS Tourism management" <?= $user_course === 'BS Tourism management' ? 'selected' : '' ?>>BS Tourism Management</option>
+                                <option value="BS Accountancy" <?= $form_course === 'BS Accountancy' ? 'selected' : '' ?>>BS Accountancy</option>
+                                <option value="BS Business administration" <?= $form_course === 'BS Business administration' ? 'selected' : '' ?>>BS Business Administration</option>
+                                <option value="BS Computer engineering" <?= $form_course === 'BS Computer engineering' ? 'selected' : '' ?>>BS Computer Engineering</option>
+                                <option value="BS Criminology" <?= $form_course === 'BS Criminology' ? 'selected' : '' ?>>BS Criminology</option>
+                                <option value="BS Custom Administration" <?= $form_course === 'BS Custom Administration' ? 'selected' : '' ?>>BS Custom Administration</option>
+                                <option value="BS Hospitality management" <?= $form_course === 'BS Hospitality management' ? 'selected' : '' ?>>BS Hospitality Management</option>
+                                <option value="BS Information Technology" <?= $form_course === 'BS Information Technology' ? 'selected' : '' ?>>BS Information Technology</option>
+                                <option value="BS Physical education" <?= $form_course === 'BS Physical education' ? 'selected' : '' ?>>BS Physical Education</option>
+                                <option value="BS Psychology" <?= $form_course === 'BS Psychology' ? 'selected' : '' ?>>BS Psychology</option>
+                                <option value="BS Secondary education" <?= $form_course === 'BS Secondary education' ? 'selected' : '' ?>>BS Secondary Education</option>
+                                <option value="BS Social work" <?= $form_course === 'BS Social work' ? 'selected' : '' ?>>BS Social Work</option>
+                                <option value="BS Tourism management" <?= $form_course === 'BS Tourism management' ? 'selected' : '' ?>>BS Tourism Management</option>
                             </optgroup>
                             <?php endif; ?>
                             <?php if ($user_institution === 'MCNP' || empty($user_institution)): ?>
                             <optgroup label="MCNP">
-                                <option value="BS Medical laboratory science" <?= $user_course === 'BS Medical laboratory science' ? 'selected' : '' ?>>BS Medical Lab Science</option>
-                                <option value="BS Midwifery" <?= $user_course === 'BS Midwifery' ? 'selected' : '' ?>>BS Midwifery</option>
-                                <option value="BS Nursing" <?= $user_course === 'BS Nursing' ? 'selected' : '' ?>>BS Nursing</option>
-                                <option value="BS Pharmacy" <?= $user_course === 'BS Pharmacy' ? 'selected' : '' ?>>BS Pharmacy</option>
-                                <option value="BS Physical therapy" <?= $user_course === 'BS Physical therapy' ? 'selected' : '' ?>>BS Physical Therapy</option>
-                                <option value="BS Radiologic technology" <?= $user_course === 'BS Radiologic technology' ? 'selected' : '' ?>>BS Radiologic Technology</option>
-                                <option value="Dental technology" <?= $user_course === 'Dental technology' ? 'selected' : '' ?>>Dental Technology</option>
+                                <option value="BS Medical laboratory science" <?= $form_course === 'BS Medical laboratory science' ? 'selected' : '' ?>>BS Medical Lab Science</option>
+                                <option value="BS Midwifery" <?= $form_course === 'BS Midwifery' ? 'selected' : '' ?>>BS Midwifery</option>
+                                <option value="BS Nursing" <?= $form_course === 'BS Nursing' ? 'selected' : '' ?>>BS Nursing</option>
+                                <option value="BS Pharmacy" <?= $form_course === 'BS Pharmacy' ? 'selected' : '' ?>>BS Pharmacy</option>
+                                <option value="BS Physical therapy" <?= $form_course === 'BS Physical therapy' ? 'selected' : '' ?>>BS Physical Therapy</option>
+                                <option value="BS Radiologic technology" <?= $form_course === 'BS Radiologic technology' ? 'selected' : '' ?>>BS Radiologic Technology</option>
+                                <option value="Dental technology" <?= $form_course === 'Dental technology' ? 'selected' : '' ?>>Dental Technology</option>
                             </optgroup>
                             <?php endif; ?>
                         </select>
                     </div>
                 </div>
                 
-                <div style="margin-bottom: 20px;">
-                    <label class="form-label">Contact Number</label>
-                    <input type="text" name="contact_number" placeholder="e.g. 09123456789" value="<?= htmlspecialchars($user_contact_number) ?>" class="form-input">
+                <?php
+                // Region -> province -> city / municipality -> barangay, filled by
+                // address_picker.js from psgc/. $legacy is an address typed before
+                // the picker existed: shown so the student can pick the same place.
+                $place_picker = function ($name, $id, $place, array $opts = []) {
+                    $place = is_array($place) ? $place : [];
+                    $levels = ['region' => 'Region', 'province' => 'Province', 'city' => 'City / Municipality', 'barangay' => 'Barangay'];
+                    $html = '<div class="pf-place" data-place-group id="' . $id . '_group">';
+                    foreach ($levels as $level => $label) {
+                        $html .= '<div><label class="form-label pf-place-label" for="' . $id . '_' . $level . '">' . $label . '</label>'
+                               . '<select class="form-select" id="' . $id . '_' . $level . '" name="' . $name . '[' . $level . ']" data-place="' . $level . '"'
+                               . ' data-value="' . htmlspecialchars($place[$level] ?? '') . '">'
+                               . '<option value="">' . htmlspecialchars(($place[$level] ?? '') !== '' ? $place[$level] : 'Loading...') . '</option></select></div>';
+                    }
+                    if (!empty($opts['street'])) {
+                        $html .= '<div class="pf-place-street"><label class="form-label pf-place-label" for="' . $id . '_street">House No. / Street / Purok</label>'
+                               . '<input type="text" class="form-input" id="' . $id . '_street" name="' . $name . '[street]" maxlength="150"'
+                               . ' placeholder="Leave blank if none" value="' . htmlspecialchars($place['street'] ?? '') . '"></div>';
+                    }
+                    if (!empty($opts['zip'])) {
+                        $html .= '<div><label class="form-label pf-place-label" for="' . $id . '_zip">ZIP Code' . (!empty($opts['required']) ? ' <span class="pf-req" title="Required">*</span>' : '') . '</label>'
+                               . '<input type="text" class="form-input" id="' . $id . '_zip" name="' . $name . '[zip]" inputmode="numeric" maxlength="4" pattern="\d{4}"'
+                               . ' title="4 digits, e.g. 3500" placeholder="e.g. 3500" value="' . htmlspecialchars($place['zip'] ?? '') . '"></div>';
+                    }
+                    $html .= '</div>';
+                    if (!empty($opts['legacy']) && trim((string)($place['region'] ?? '')) === '') {
+                        $html .= '<span class="pf-hint pf-legacy"><i class="fas fa-circle-info"></i> Typed before: <strong>'
+                               . htmlspecialchars($opts['legacy']) . '</strong> &mdash; please pick it from the lists above.</span>';
+                    }
+                    return $html;
+                };
+
+                // One input of the profile, drawn from its definition in profile_config.php.
+                $profile_input = function ($key, $field) use ($profile, $profile_age, $place_picker, $user_data) {
+                    if ($field['type'] === 'address') {
+                        $legacy = $key === 'home' ? ($user_data['address'] ?? '') : ($key === 'guardian_place' ? ($profile['guardian_address'] ?? '') : '');
+                        echo '<div class="is-wide"><div class="pf-place-head"><span class="form-label">' . htmlspecialchars($field['label'])
+                           . (!empty($field['required']) ? ' <span class="pf-req" title="Required">*</span>' : '') . '</span>';
+                        if (!empty($field['copy_home'])) {
+                            // Most families share one address: copy the permanent one in a click.
+                            echo '<button type="button" class="pf-copy-place" data-copy-from="pf_home_group" data-copy-to="pf_' . $key . '_group">'
+                               . '<i class="fas fa-copy"></i> Same as my permanent address</button>';
+                        }
+                        echo '</div>';
+                        echo $place_picker('profile[' . $key . ']', 'pf_' . $key, $profile[$key] ?? [], [
+                            'street' => true, 'zip' => !empty($field['zip']), 'required' => !empty($field['required']), 'legacy' => is_string($legacy) ? $legacy : '',
+                        ]);
+                        echo '</div>';
+                        return;
+                    }
+                    // A parent's name used to be one box; until it is split, show what was typed.
+                    $legacy_name = ['father_last_name' => 'father_name', 'mother_last_name' => 'mother_name'][$key] ?? null;
+                    $value = htmlspecialchars($profile[$key] ?? '');
+                    $id = 'pf_' . $key;
+                    $name = 'profile[' . $key . ']';
+                    echo '<div' . (!empty($field['wide']) ? ' class="is-wide"' : '') . '>';
+                    echo '<label class="form-label" for="' . $id . '">' . htmlspecialchars($field['label']) . (!empty($field['required']) ? ' <span class="pf-req" title="Required">*</span>' : '') . '</label>';
+                    if ($field['type'] === 'select') {
+                        echo '<select class="form-select" id="' . $id . '" name="' . $name . '"><option value="">Select...</option>';
+                        foreach ($field['options'] as $option) {
+                            echo '<option' . (($profile[$key] ?? '') === $option ? ' selected' : '') . '>' . htmlspecialchars($option) . '</option>';
+                        }
+                        echo '</select>';
+                    } elseif ($field['type'] === 'date') {
+                        echo '<input class="form-input" type="date" id="' . $id . '" name="' . $name . '" value="' . $value . '" max="' . date('Y-m-d') . '">';
+                        echo '<span class="pf-hint" id="pfAge" aria-live="polite">' . ($profile_age !== null ? 'Age: ' . $profile_age . ' years old' : 'Your age is worked out from this.') . '</span>';
+                    } elseif ($field['type'] === 'tel') {
+                        echo '<input class="form-input" type="tel" inputmode="tel" autocomplete="off" id="' . $id . '" name="' . $name . '" value="' . $value . '" maxlength="20" pattern="' . PROFILE_PHONE_HTML_PATTERN . '" title="Digits only, e.g. 09123456789" placeholder="e.g. 09123456789">';
+                    } else {
+                        echo '<input class="form-input" type="text" id="' . $id . '" name="' . $name . '" value="' . $value . '" maxlength="' . (int)($field['max'] ?? 120) . '" placeholder="' . htmlspecialchars($field['placeholder'] ?? '') . '">';
+                    }
+                    if ($legacy_name && ($profile[$key] ?? '') === '' && !empty($profile[$legacy_name])) {
+                        echo '<span class="pf-hint pf-legacy">Typed before as one line: <strong>' . htmlspecialchars($profile[$legacy_name]) . '</strong></span>';
+                    }
+                    echo '</div>';
+                };
+                $profile_sections = getProfileSections();
+                ?>
+
+                <div class="pf-section">
+                    <h4><i class="fas <?= $profile_sections['personal']['icon'] ?>"></i> <?= htmlspecialchars($profile_sections['personal']['title']) ?></h4>
+                    <p>Your name and student ID come from your registration. Ask the Registrar's Office if either needs correcting.</p>
+                </div>
+                <div class="pf-grid">
+                    <div>
+                        <label class="form-label">Last Name</label>
+                        <input type="text" class="form-input pf-readonly" value="<?= htmlspecialchars($last_name) ?>" readonly>
+                    </div>
+                    <div>
+                        <label class="form-label">First Name</label>
+                        <input type="text" class="form-input pf-readonly" value="<?= htmlspecialchars($first_name) ?>" readonly>
+                    </div>
+                    <div>
+                        <label class="form-label">Middle Name</label>
+                        <input type="text" class="form-input pf-readonly" value="<?= htmlspecialchars($middle_name) ?>" readonly>
+                    </div>
+                    <?php foreach ($profile_sections['personal']['fields'] as $key => $field) $profile_input($key, $field); ?>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label class="form-label">Address</label>
-                    <textarea name="address" rows="3" class="form-input" style="resize: vertical;"><?= htmlspecialchars($user_address) ?></textarea>
+                <div class="pf-section">
+                    <h4><i class="fas fa-address-book"></i> Contact Details</h4>
+                </div>
+                <div class="pf-grid">
+                    <div>
+                        <label class="form-label" for="pf_contact_number">Contact Number <span class="pf-req" title="Required">*</span></label>
+                        <input type="tel" inputmode="tel" id="pf_contact_number" name="contact_number" placeholder="e.g. 09123456789" value="<?= htmlspecialchars($user_contact_number) ?>" class="form-input" maxlength="20" pattern="<?= PROFILE_PHONE_HTML_PATTERN ?>" title="Digits only, e.g. 09123456789">
+                    </div>
+                    <div>
+                        <label class="form-label">Email</label>
+                        <input type="text" class="form-input pf-readonly" value="<?= htmlspecialchars($user_email) ?>" readonly>
+                    </div>
                 </div>
 
-                <div>
-                    <button type="submit" style="background: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">
-                        Save Profile Changes
+                <?php foreach ($profile_sections as $section_key => $profile_section): ?>
+                    <?php if ($section_key === 'personal') continue; ?>
+                    <div class="pf-section">
+                        <h4><i class="fas <?= $profile_section['icon'] ?>"></i> <?= htmlspecialchars($profile_section['title']) ?></h4>
+                        <?php if (!empty($profile_section['note'])): ?><p><?= htmlspecialchars($profile_section['note']) ?></p><?php endif; ?>
+                    </div>
+                    <div class="pf-grid">
+                        <?php foreach ($profile_section['fields'] as $key => $field) $profile_input($key, $field); ?>
+                    </div>
+                <?php endforeach; ?>
+
+                <div class="pf-section">
+                    <h4><i class="fas fa-graduation-cap"></i> Educational Background</h4>
+                    <p>List every school you attended, starting from the first. Give the years you were there, e.g. 2012 to 2018.</p>
+                </div>
+                <?php foreach (getProfileEducationLevels() as $level_key => $level): ?>
+                    <?php
+                    $edu = $profile['education'][$level_key] ?? [];
+                    $edu_name = 'education[' . $level_key . ']';
+                    $edu_id = 'pf_edu_' . $level_key;
+                    ?>
+                    <div class="pf-edu">
+                        <div class="pf-edu-title">
+                            <?= htmlspecialchars($level['label']) ?>
+                            <?php if (empty($level['always'])): ?><small>&ndash; optional</small><?php endif; ?>
+                        </div>
+                        <div class="pf-edu-grid"<?= !empty($level['school_list']) ? ' data-school-picker data-levels="' . (int)$level['school_list'] . '"' : '' ?>>
+                            <?php /* Address first: once the city is chosen, school_picker.js lists that place's schools. */ ?>
+                            <div class="pf-edu-place">
+                                <label class="form-label">School Address</label>
+                                <?= $place_picker($edu_name . '[place]', $edu_id . '_place', $edu, ['legacy' => $edu['address'] ?? '']) ?>
+                            </div>
+                            <div class="pf-edu-school">
+                                <label class="form-label" for="<?= $edu_id ?>_<?= !empty($level['school_list']) ? 'pick' : 'school' ?>">Name of School<?php if (!empty($level['always'])): ?> <span class="pf-req" title="Required">*</span><?php endif; ?></label>
+                                <?php if (!empty($level['school_list'])): ?>
+                                    <select class="form-select" id="<?= $edu_id ?>_pick" data-school-select disabled>
+                                        <option value="">Choose the school's city / municipality first</option>
+                                    </select>
+                                <?php endif; ?>
+                                <input type="text" class="form-input" id="<?= $edu_id ?>_school" name="<?= $edu_name ?>[school]" maxlength="150"
+                                       <?= !empty($level['school_list']) ? 'data-school-other placeholder="Type the name of your school"' : 'placeholder="Name of the college"' ?>
+                                       value="<?= htmlspecialchars($edu['school'] ?? '') ?>">
+                            </div>
+                            <div>
+                                <label class="form-label" for="<?= $edu_id ?>_from">S.Y. From</label>
+                                <input type="number" inputmode="numeric" class="form-input pf-year-from" id="<?= $edu_id ?>_from" name="<?= $edu_name ?>[year_from]" min="<?= PROFILE_MIN_SCHOOL_YEAR ?>" max="<?= $profile_max_year ?>" placeholder="YYYY" value="<?= htmlspecialchars($edu['year_from'] ?? '') ?>">
+                            </div>
+                            <div>
+                                <label class="form-label" for="<?= $edu_id ?>_to">S.Y. To</label>
+                                <input type="number" inputmode="numeric" class="form-input pf-year-to" id="<?= $edu_id ?>_to" name="<?= $edu_name ?>[year_to]" min="<?= PROFILE_MIN_SCHOOL_YEAR ?>" max="<?= $profile_max_year ?>" placeholder="YYYY" value="<?= htmlspecialchars($edu['year_to'] ?? '') ?>">
+                            </div>
+                            <?php if (!empty($level['extra'])): ?>
+                                <div class="is-wide">
+                                    <label class="form-label" for="<?= $edu_id ?>_extra"><?= htmlspecialchars($level['extra']) ?></label>
+                                    <input type="text" class="form-input" id="<?= $edu_id ?>_extra" name="<?= $edu_name ?>[extra]" maxlength="100" placeholder="<?= htmlspecialchars($level['extra_placeholder'] ?? '') ?>" value="<?= htmlspecialchars($edu['extra'] ?? '') ?>">
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+
+                <div class="pf-actions">
+                    <button type="submit" class="pf-btn is-primary">
+                        <i class="fas fa-floppy-disk"></i> Save Profile Changes
                     </button>
                 </div>
             </form>
         </div>
 
-        <div class="card" style="border: 1px solid rgba(0,0,0,0.05); padding: 24px; border-radius: 16px; background: white; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <div style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: rgba(26,54,93,0.1); color: var(--primary-color);"><i class="fas fa-palette"></i></div>
-                <div>
-                    <h3 style="font-size: 15px; font-weight: 600; color: #1e293b; margin: 0;">Theme Personalization</h3>
-                    <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;">Customize the look and feel of your dashboard — changes apply instantly</p>
-                </div>
+        <div class="card" id="appearance" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <h3><i class="fas fa-circle-half-stroke"></i> Appearance</h3>
             </div>
-            
-            <!-- Accent Color -->
-            <div class="color-setting">
-                <div class="color-setting-label"><i class="fas fa-droplet"></i> Accent Theme Color</div>
-                <div class="color-picker-row">
-                    <input type="color" id="custom-theme-color" class="custom-color-picker" oninput="setThemeColor(this.value); syncHex('theme-hex', this.value); updateSwatches('theme'); updatePreview()" onchange="setThemeColor(this.value); showToast('Accent color updated!')" title="Pick accent color">
-                    <input type="text" id="theme-hex" class="color-hex-input" maxlength="7" placeholder="#1a365d" oninput="applyHex(this, 'custom-theme-color', setThemeColor); updateSwatches('theme'); updatePreview()">
-                    <div class="preset-swatches" id="theme-swatches"></div>
-                </div>
+            <div class="theme-choices">
+                <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">
+                    <span class="theme-choice-icon"><i class="fas fa-sun"></i></span>
+                    <span><strong>Light mode</strong><small>Bright background, dark text</small></span>
+                    <i class="fas fa-circle-check theme-choice-check"></i>
+                </button>
+                <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">
+                    <span class="theme-choice-icon"><i class="fas fa-moon"></i></span>
+                    <span><strong>Dark mode</strong><small>Dark background, light text</small></span>
+                    <i class="fas fa-circle-check theme-choice-check"></i>
+                </button>
             </div>
-
-            <!-- Background Color -->
-            <div class="color-setting">
-                <div class="color-setting-label"><i class="fas fa-fill-drip"></i> Background Color</div>
-                <div class="color-picker-row">
-                    <input type="color" id="custom-bg-color" class="custom-color-picker" oninput="setBgColor(this.value); syncHex('bg-hex', this.value); updateSwatches('bg'); updatePreview()" onchange="setBgColor(this.value); showToast('Background color updated!')" title="Pick background color">
-                    <input type="text" id="bg-hex" class="color-hex-input" maxlength="7" placeholder="#f1f5f9" oninput="applyHex(this, 'custom-bg-color', setBgColor); updateSwatches('bg'); updatePreview()">
-                    <div class="preset-swatches" id="bg-swatches"></div>
-                </div>
-            </div>
-
-            <!-- Sidebar Color -->
-            <div class="color-setting">
-                <div class="color-setting-label"><i class="fas fa-columns"></i> Sidebar Color</div>
-                <div class="color-picker-row">
-                    <input type="color" id="custom-sidebar-color" class="custom-color-picker" oninput="setSidebarBg(this.value); syncHex('sidebar-hex', this.value); updateSwatches('sidebar'); updatePreview()" onchange="setSidebarBg(this.value); showToast('Sidebar color updated!')" title="Pick sidebar color">
-                    <input type="text" id="sidebar-hex" class="color-hex-input" maxlength="7" placeholder="#ffffff" oninput="applyHex(this, 'custom-sidebar-color', setSidebarBg); updateSwatches('sidebar'); updatePreview()">
-                    <div class="preset-swatches" id="sidebar-swatches"></div>
-                </div>
-            </div>
-
-            <!-- Live Preview -->
-            <div class="live-preview">
-                <div class="live-preview-label"><i class="fas fa-eye" style="margin-right: 4px;"></i> Live Preview</div>
-                <div class="preview-mini" id="live-preview-box">
-                    <div class="preview-sidebar-mini" id="preview-sidebar">
-                        <div class="dot active" id="preview-accent-dot"></div>
-                        <div class="dot"></div>
-                        <div class="dot"></div>
-                        <div class="dot"></div>
-                    </div>
-                    <div class="preview-main-mini" id="preview-main">
-                        <div class="bar accent" id="preview-accent-bar"></div>
-                        <div class="bar" style="width: 80%;"></div>
-                        <div class="bar" style="width: 60%;"></div>
-                        <div class="bar" style="width: 90%;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reset Button -->
-            <button class="reset-btn" onclick="resetToDefaults()">
-                <i class="fas fa-rotate-left"></i> Reset to Defaults
-            </button>
+            <p class="theme-note">Applies right away to every page of your portal on this device.</p>
         </div>
-
     </div>
 </div>
 
 <!-- Toast notification -->
-<div class="toast toast-info" id="toast"></div>
-
+<?php if ($profile_just_completed): ?>
+<div class="pf-done" id="pfDone" role="dialog" aria-modal="true" aria-labelledby="pfDoneTitle">
+    <div class="pf-done-backdrop" data-pf-done-close></div>
+    <div class="pf-done-card" tabindex="-1">
+        <div class="pf-done-icon"><i class="fas fa-circle-check"></i></div>
+        <h3 id="pfDoneTitle">Your profile is complete!</h3>
+        <p>Every required detail is filled in. Keep it up to date whenever something changes &mdash; the registrar uses it for your records and forms.</p>
+        <div class="pf-done-actions">
+            <button type="button" class="pf-btn is-ghost" data-pf-done-close data-open-profile><i class="fas fa-eye"></i> View my profile</button>
+            <button type="button" class="pf-btn is-primary" data-pf-done-close>Done</button>
+        </div>
+    </div>
+</div>
 <script>
-    // ─── PRESET COLORS ───
-    const presets = {
-        theme: ['#1a365d','#c9a227','#10b981','#8b5cf6','#ef4444','#f59e0b','#ec4899','#06b6d4','#84cc16','#f97316'],
-        bg:    ['#f1f5f9','#0f172a','#1a1a2e','#f8fafc','#f3f4f6','#ffffff','#1e1e2e','#0d1117','#0c0c1d','#0b132b'],
-        sidebar: ['#ffffff','#0f172a','#1a1a2e','#f8fafc','#f1f5f9','#1e1e2e','#0d1117','#171717','#0c0a09','#0b132b']
-    };
-
-    function buildSwatches(type) {
-        const container = document.getElementById(type + '-swatches');
-        if (!container) return;
-        container.innerHTML = '';
-        presets[type].forEach(color => {
-            const swatch = document.createElement('div');
-            swatch.className = 'swatch';
-            swatch.style.background = color;
-            swatch.title = color;
-            swatch.onclick = () => {
-                document.getElementById(type === 'theme' ? 'custom-theme-color' : type === 'bg' ? 'custom-bg-color' : 'custom-sidebar-color').value = color;
-                document.getElementById(type === 'theme' ? 'theme-hex' : type === 'bg' ? 'bg-hex' : 'sidebar-hex').value = color;
-                if (type === 'theme') setThemeColor(color);
-                else if (type === 'bg') setBgColor(color);
-                else setSidebarBg(color);
-                updateSwatches(type);
-                updatePreview();
-                showToast('Color applied!');
-            };
-            container.appendChild(swatch);
-        });
-        updateSwatches(type);
-    }
-
-    function updateSwatches(type) {
-        const pickerId = type === 'theme' ? 'custom-theme-color' : type === 'bg' ? 'custom-bg-color' : 'custom-sidebar-color';
-        const currentColor = document.getElementById(pickerId).value.toLowerCase();
-        const container = document.getElementById(type + '-swatches');
-        if (!container) return;
-        container.querySelectorAll('.swatch').forEach(s => {
-            const swatchColor = rgbToHex(s.style.backgroundColor) || s.title;
-            s.classList.toggle('active', swatchColor.toLowerCase() === currentColor);
-        });
-    }
-
-    function rgbToHex(rgb) {
-        if (rgb.startsWith('#')) return rgb;
-        const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-        if (!match) return '';
-        return '#' + [match[1], match[2], match[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
-    }
-
-    function syncHex(hexId, value) {
-        document.getElementById(hexId).value = value;
-    }
-
-    function applyHex(input, pickerId, fn) {
-        const val = input.value;
-        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-            document.getElementById(pickerId).value = val;
-            fn(val);
+    // Shown once, right after the save that completed the profile.
+    (function () {
+        var modal = document.getElementById('pfDone');
+        if (!modal) return;
+        var close = function () { modal.hidden = true; document.removeEventListener('keydown', onKey); };
+        var onKey = function (event) { if (event.key === 'Escape') close(); };
+        modal.addEventListener('click', function (event) { if (event.target.closest('[data-pf-done-close]')) close(); });
+        document.addEventListener('keydown', onKey);
+        modal.querySelector('.pf-done-card').focus();
+    })();
+</script>
+<?php endif; ?>
+<script>
+    // Edit Profile: show the age as soon as a birth date is picked, and stop a
+    // school's ending year from being earlier than its starting year.
+    (function () {
+        var birth = document.getElementById('pf_birth_date');
+        var ageHint = document.getElementById('pfAge');
+        if (birth && ageHint) {
+            birth.addEventListener('input', function () {
+                var parts = birth.value.split('-');
+                if (parts.length !== 3) { ageHint.textContent = 'Your age is worked out from this.'; return; }
+                var today = new Date();
+                var age = today.getFullYear() - parts[0];
+                var beforeBirthday = (today.getMonth() + 1) < parts[1] ||
+                    ((today.getMonth() + 1) === +parts[1] && today.getDate() < parts[2]);
+                if (beforeBirthday) age--;
+                ageHint.textContent = (age >= 0 && age < 130) ? 'Age: ' + age + ' years old' : 'Please check this date.';
+            });
         }
-    }
-
-    function setThemeColor(color) {
-        document.documentElement.style.setProperty('--primary-color', color);
-        localStorage.setItem('student-theme-color', color);
-    }
-    
-    function setBgColor(color) {
-        document.documentElement.style.setProperty('--bg-color', color);
-        localStorage.setItem('student-bg-color', color);
-    }
-    
-    function setSidebarBg(color) {
-        document.documentElement.style.setProperty('--sidebar-bg', color);
-        localStorage.setItem('student-sidebar-bg', color);
-    }
-
-    // ─── RESET ───
-    function resetToDefaults() {
-        const defaults = { theme: '#1a365d', bg: '#f1f5f9', sidebar: '#ffffff' };
-
-        setThemeColor(defaults.theme);
-        setBgColor(defaults.bg);
-        setSidebarBg(defaults.sidebar);
-
-        document.getElementById('custom-theme-color').value = defaults.theme;
-        document.getElementById('theme-hex').value = defaults.theme;
-        document.getElementById('custom-bg-color').value = defaults.bg;
-        document.getElementById('bg-hex').value = defaults.bg;
-        document.getElementById('custom-sidebar-color').value = defaults.sidebar;
-        document.getElementById('sidebar-hex').value = defaults.sidebar;
-
-        updateSwatches('theme');
-        updateSwatches('bg');
-        updateSwatches('sidebar');
-        updatePreview();
-        showToast('Reset to default colors!', 'success');
-    }
-
-    // ─── LIVE PREVIEW ───
-    function updatePreview() {
-        const accent = document.getElementById('custom-theme-color').value;
-        const bg = document.getElementById('custom-bg-color').value;
-        const sidebar = document.getElementById('custom-sidebar-color').value;
-
-        document.getElementById('preview-sidebar').style.background = sidebar;
-        document.getElementById('preview-main').style.background = bg;
-        document.getElementById('preview-accent-dot').style.background = accent;
-        document.getElementById('preview-accent-bar').style.background = accent;
-    }
-
-    // ─── TOAST ───
-    function showToast(msg, type = 'info') {
-        const toast = document.getElementById('toast');
-        toast.className = 'toast toast-' + type;
-        toast.innerHTML = '<i class="fas fa-' + (type === 'success' ? 'check-circle' : 'paint-brush') + '"></i> ' + msg;
-        toast.classList.add('show');
-        clearTimeout(window._toastTimer);
-        window._toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
-    }
-
-    // Load saved color on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedColor = localStorage.getItem('student-theme-color') || '#1a365d';
-        document.documentElement.style.setProperty('--primary-color', savedColor);
-        if (/^#[0-9A-F]{6}$/i.test(savedColor)) { document.getElementById('custom-theme-color').value = savedColor; document.getElementById('theme-hex').value = savedColor; }
-        
-        const savedBgColor = localStorage.getItem('student-bg-color') || '#f1f5f9';
-        document.documentElement.style.setProperty('--bg-color', savedBgColor);
-        if (/^#[0-9A-F]{6}$/i.test(savedBgColor)) { document.getElementById('custom-bg-color').value = savedBgColor; document.getElementById('bg-hex').value = savedBgColor; }
-        
-        const savedSidebarBgColor = localStorage.getItem('student-sidebar-bg') || '#ffffff';
-        document.documentElement.style.setProperty('--sidebar-bg', savedSidebarBgColor);
-        if (/^#[0-9A-F]{6}$/i.test(savedSidebarBgColor)) { document.getElementById('custom-sidebar-color').value = savedSidebarBgColor; document.getElementById('sidebar-hex').value = savedSidebarBgColor; }
-        
-        buildSwatches('theme');
-        buildSwatches('bg');
-        buildSwatches('sidebar');
-        updatePreview();
-    });
+        document.querySelectorAll('.pf-edu').forEach(function (row) {
+            var from = row.querySelector('.pf-year-from');
+            var to = row.querySelector('.pf-year-to');
+            function check() {
+                var wrong = from.value && to.value && +from.value > +to.value;
+                to.setCustomValidity(wrong ? 'The ending year cannot be before the starting year.' : '');
+            }
+            from.addEventListener('input', check);
+            to.addEventListener('input', check);
+        });
+    })();
 </script>
 <script>
     function toggleSidebar() {

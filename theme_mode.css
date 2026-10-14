@@ -1,0 +1,365 @@
+/*
+ * Light mode / dark mode (theme_mode.js sets the mode on <html>).
+ *
+ * The student pages are written light and the registrar pages dark, each with
+ * hundreds of hard-coded colours in their own <style> blocks and style=""
+ * attributes. So the other mode is not a second palette: when the chosen mode
+ * is not the one a page was written in (html[data-theme-invert]), the whole
+ * page is inverted and its hues turned back round. Every text/background pair
+ * therefore keeps exactly the contrast it was designed with - nothing can end
+ * up dark-on-dark or light-on-light - and a page or component added later is
+ * covered without anything being written for it. Charts are inverted with the
+ * page, so their labels stay readable too.
+ *
+ * What must NOT be inverted is flipped back with the same filter (inverting
+ * twice is exact): photos, logos, the uploaded document in the viewer, and the
+ * printed request form, which stays white paper. When adding something that
+ * shows a real picture or a real sheet of paper, add it to that list.
+ *
+ * The filter sits on <html>, the one element where a filter does not turn
+ * position: fixed children into absolutely-positioned ones, so the sidebar,
+ * app bar and modals behave as before.
+ */
+html[data-theme-invert] {
+    filter: invert(1) hue-rotate(180deg);
+    /* Set on <html> itself so the page canvas is inverted too. */
+    background: var(--bg-color, #f1f5f9);
+}
+html[data-theme-invert][data-theme-base="dark"] {
+    background: var(--main-bg, #0f172a);
+}
+/* Native controls and scrollbars are drawn in the base mode, then inverted with the rest. */
+html[data-theme-base="light"] { color-scheme: light; }
+html[data-theme-base="dark"] { color-scheme: dark; }
+
+/* Pictures and real documents: back to their true colours. */
+html[data-theme-invert] img,
+html[data-theme-invert] video,
+html[data-theme-invert] iframe,
+html[data-theme-invert] .doc-viewer-content canvas,
+html[data-theme-invert] .rf-page {
+    filter: invert(1) hue-rotate(180deg);
+}
+/* Already inside something flipped back: leave alone, or it inverts again. */
+html[data-theme-invert] .rf-page img {
+    filter: none;
+}
+
+/* A dark drop shadow inverts into a white glow; drop it on the large surfaces. */
+html[data-theme-invert][data-theme-base="light"] .card,
+html[data-theme-invert][data-theme-base="light"] .sidebar,
+html[data-theme-invert][data-theme-base="light"] .sp-panel,
+html[data-theme-invert][data-theme-base="light"] .uid-box {
+    box-shadow: none;
+}
+
+/* The dimming veil behind a modal or the phone drawer is dark; inverted it
+   would wash the page out in white. A light veil inverts back into a dark one. */
+html[data-theme-invert] .sidebar-overlay,
+html[data-theme-invert] .sp-backdrop,
+html[data-theme-invert] .pf-done-backdrop,
+html[data-theme-invert] .uid-backdrop,
+html[data-theme-invert] .rv-backdrop,
+html[data-theme-invert] .doc-viewer-backdrop,
+html[data-theme-invert] .receipt-backdrop {
+    background: rgba(226, 232, 240, 0.62);
+}
+
+
+
+
+
+
+/* STUDENT-DARK-START
+   ── Student dark mode in the registrar's colours ─────────────────────────────
+   Inversion alone turns the student's white cards black. The registrar's dark
+   theme is navy: page #0f172a, cards #1e293b, gold accent #c9a227. So in
+   student dark mode the main surfaces are painted with the colour that the
+   inversion turns INTO those: every value below is "what to set so that
+   invert + hue-rotate shows the wanted colour", not the colour you see.
+
+       set #e1e9fc -> shows #0f172a   page and sidebar
+       set #cdd8ea -> shows #1e293b   cards and anything else painted white
+       set #d7e1f3 -> shows #162032   near-white panels (#f8fafc, #f1f5f9)
+       set #e1e9fc -> shows #0f172a   inputs that have no background of their own
+       set #855e00 -> shows #c9a227   --primary-color (white text on it shows near-black)
+
+   Text, borders, badges and everything not listed still come from the
+   inversion, so contrast is unchanged. The two selector lists are every rule on
+   the student pages that paints such a background. A new white surface that is
+   missing here still works - it just shows black instead of navy until its
+   selector is added to the first list. */
+/* On <body> too: submissions.php and reject.php define these three on
+   body.student-mode, which would otherwise shadow the values set on <html>. */
+html[data-theme-invert][data-theme-base="light"],
+html[data-theme-invert][data-theme-base="light"] body {
+    --primary-color: #855e00;
+    --bg-color: #e1e9fc;
+    --sidebar-bg: #e1e9fc;
+}
+html[data-theme-invert][data-theme-base="light"] {
+    background: #e1e9fc;
+}
+/* Zero specificity: only replaces the browser's own white, never a page's rule. */
+:where(html[data-theme-invert][data-theme-base="light"]) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]), select, textarea) {
+    background-color: #e1e9fc;
+}
+
+/* A page background set without the variable */
+html[data-theme-invert][data-theme-base="light"] body.student-mode {
+    background-color: #e1e9fc !important;
+}
+
+/* Painted white -> card */
+html[data-theme-invert][data-theme-base="light"] .stat-card,
+html[data-theme-invert][data-theme-base="light"] .card,
+html[data-theme-invert][data-theme-base="light"] .enroll-status-card,
+html[data-theme-invert][data-theme-base="light"] .notif-modal-content,
+html[data-theme-invert][data-theme-base="light"] #calendar-card,
+html[data-theme-invert][data-theme-base="light"] .notif-card,
+html[data-theme-invert][data-theme-base="light"] .receipt-dialog,
+html[data-theme-invert][data-theme-base="light"] .summary-row,
+html[data-theme-invert][data-theme-base="light"] .summary-row:hover,
+html[data-theme-invert][data-theme-base="light"] .summary-row.is-open,
+html[data-theme-invert][data-theme-base="light"] .form-section,
+html[data-theme-invert][data-theme-base="light"] .field input,
+html[data-theme-invert][data-theme-base="light"] .field select,
+html[data-theme-invert][data-theme-base="light"] .field textarea,
+html[data-theme-invert][data-theme-base="light"] .check-item,
+html[data-theme-invert][data-theme-base="light"] .fchip,
+html[data-theme-invert][data-theme-base="light"] .picker-card,
+html[data-theme-invert][data-theme-base="light"] .picker-card:hover,
+html[data-theme-invert][data-theme-base="light"] .form-select,
+html[data-theme-invert][data-theme-base="light"] .ck-ring::before,
+html[data-theme-invert][data-theme-base="light"] .ck-row,
+html[data-theme-invert][data-theme-base="light"] .ck-file-btn,
+html[data-theme-invert][data-theme-base="light"] .verify-modal-card,
+html[data-theme-invert][data-theme-base="light"] .delete-modal-card,
+html[data-theme-invert][data-theme-base="light"] .btn-delete-cancel,
+html[data-theme-invert][data-theme-base="light"] .mobile-appbar,
+html[data-theme-invert][data-theme-base="light"] .sp-panel,
+html[data-theme-invert][data-theme-base="light"] .sp-chips span,
+html[data-theme-invert][data-theme-base="light"] .pf-edu .form-input,
+html[data-theme-invert][data-theme-base="light"] .pf-copy-place,
+html[data-theme-invert][data-theme-base="light"] .pf-btn.is-ghost,
+html[data-theme-invert][data-theme-base="light"] .pf-done-card,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .search-bar,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .topbar-icon-btn,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .table-card,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .note-modal-card,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .table-card table tr,
+html[data-theme-invert][data-theme-base="light"] [style*="background: white"],
+html[data-theme-invert][data-theme-base="light"] [style*="background:white"],
+html[data-theme-invert][data-theme-base="light"] [style*="background: #fff;"],
+html[data-theme-invert][data-theme-base="light"] [style*="background:#fff;"],
+html[data-theme-invert][data-theme-base="light"] [style*="background: #ffffff"],
+html[data-theme-invert][data-theme-base="light"] [style*="background:#ffffff"],
+html[data-theme-invert][data-theme-base="light"] [style*="background-color: white"],
+html[data-theme-invert][data-theme-base="light"] [style*="background-color: #fff;"],
+html[data-theme-invert][data-theme-base="light"] [style*="background-color: #ffffff"],
+html[data-theme-invert][data-theme-base="light"] .theme-fab,
+html[data-theme-invert][data-theme-base="light"] .theme-choice {
+    background-color: #cdd8ea !important;
+}
+
+/* Painted near-white -> inner panel */
+html[data-theme-invert][data-theme-base="light"] .student-info,
+html[data-theme-invert][data-theme-base="light"] .nav-item:not(.active):hover,
+html[data-theme-invert][data-theme-base="light"] .logout-btn:hover,
+html[data-theme-invert][data-theme-base="light"] .upload-section,
+html[data-theme-invert][data-theme-base="light"] .notif-modal-close:hover,
+html[data-theme-invert][data-theme-base="light"] .notif-modal-close:active,
+html[data-theme-invert][data-theme-base="light"] .notif-modal-footer,
+html[data-theme-invert][data-theme-base="light"] .notif-item:hover,
+html[data-theme-invert][data-theme-base="light"] .notif-item:active,
+html[data-theme-invert][data-theme-base="light"] .nav-item:hover,
+html[data-theme-invert][data-theme-base="light"] .receipt-facts > div,
+html[data-theme-invert][data-theme-base="light"] .receipt-close:hover,
+html[data-theme-invert][data-theme-base="light"] .registrar-note.warn,
+html[data-theme-invert][data-theme-base="light"] .registrar-note.calm,
+html[data-theme-invert][data-theme-base="light"] .btn-ghost,
+html[data-theme-invert][data-theme-base="light"] .btn-danger-ghost,
+html[data-theme-invert][data-theme-base="light"] .field input[readonly],
+html[data-theme-invert][data-theme-base="light"] .check-item:hover,
+html[data-theme-invert][data-theme-base="light"] .fchip:hover,
+html[data-theme-invert][data-theme-base="light"] .locked-card .icon,
+html[data-theme-invert][data-theme-base="light"] .file-input-wrapper input[type="file"],
+html[data-theme-invert][data-theme-base="light"] .ck-chip,
+html[data-theme-invert][data-theme-base="light"] .ck-note.info,
+html[data-theme-invert][data-theme-base="light"] .ck-row.is-approved,
+html[data-theme-invert][data-theme-base="light"] .ck-row.is-rejected,
+html[data-theme-invert][data-theme-base="light"] .ck-mark,
+html[data-theme-invert][data-theme-base="light"] .doc-status,
+html[data-theme-invert][data-theme-base="light"] .doc-reject-note,
+html[data-theme-invert][data-theme-base="light"] .ck-file,
+html[data-theme-invert][data-theme-base="light"] .ck-file:hover,
+html[data-theme-invert][data-theme-base="light"] .delete-modal-close,
+html[data-theme-invert][data-theme-base="light"] .delete-modal-doc-pill,
+html[data-theme-invert][data-theme-base="light"] .delete-modal-warning-box,
+html[data-theme-invert][data-theme-base="light"] .btn-delete-cancel:hover,
+html[data-theme-invert][data-theme-base="light"] .review-note,
+html[data-theme-invert][data-theme-base="light"] .doc-table tr,
+html[data-theme-invert][data-theme-base="light"] body.student-shell .sidebar .student-info,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .sidebar .student-info,
+html[data-theme-invert][data-theme-base="light"] body.student-shell .sidebar .nav-item:not(.active):hover,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .sidebar .nav-link:not(.active):hover,
+html[data-theme-invert][data-theme-base="light"] body.student-shell .sidebar .logout-btn:hover,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .sidebar .logout-btn:hover,
+html[data-theme-invert][data-theme-base="light"] .sp-close,
+html[data-theme-invert][data-theme-base="light"] .sp-head,
+html[data-theme-invert][data-theme-base="light"] .sp-foot,
+html[data-theme-invert][data-theme-base="light"] .sp-foot.is-missing,
+html[data-theme-invert][data-theme-base="light"] .pf-readonly,
+html[data-theme-invert][data-theme-base="light"] .pf-edu,
+html[data-theme-invert][data-theme-base="light"] .pf-copy-place:hover,
+html[data-theme-invert][data-theme-base="light"] .pf-btn.is-ghost:hover,
+html[data-theme-invert][data-theme-base="light"] .pf-missing,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .nav-link:not(.active):hover,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .student-info,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .logout-btn:hover,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .cell-student-id .sid,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .note-modal-doc,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .note-modal-body,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .back-button:hover,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .flash-banner.flash-error,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .btn-reject,
+html[data-theme-invert][data-theme-base="light"] [style*="background: #f8fafc"],
+html[data-theme-invert][data-theme-base="light"] [style*="background: #f1f5f9"],
+html[data-theme-invert][data-theme-base="light"] [style*="background:#f8fafc"],
+html[data-theme-invert][data-theme-base="light"] [style*="background:#f1f5f9"],
+html[data-theme-invert][data-theme-base="light"] [style*="background-color: #f8fafc"],
+html[data-theme-invert][data-theme-base="light"] [style*="background-color: #f1f5f9"],
+html[data-theme-invert][data-theme-base="light"] .theme-choice[aria-pressed="true"],
+html[data-theme-invert][data-theme-base="light"] .theme-choice-icon {
+    background-color: #d7e1f3 !important;
+}
+
+/* The app bar title on the two pages shared with the registrar takes its light
+   text from the registrar's rules; on the navy bar it must stay light, so it is
+   set dark here and the inversion turns it light. */
+html[data-theme-invert][data-theme-base="light"] body.student-mode .mobile-appbar-brand,
+html[data-theme-invert][data-theme-base="light"] body.student-mode .mobile-appbar-brand span {
+    color: #0f172a !important;
+}
+/* STUDENT-DARK-END */
+
+/* ── The switch at the top right of every page (placed by theme_mode.js) ─────── */
+.theme-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    background: #ffffff;
+    color: var(--primary-color, #1a365d);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.theme-fab:hover { transform: scale(1.08); border-color: #94a3b8; }
+.theme-fab:focus-visible { outline: 3px solid rgba(59, 130, 246, 0.5); outline-offset: 2px; }
+html[data-theme-base="dark"] .theme-fab {
+    border-color: #334155;
+    background: #1e293b;
+    color: var(--accent-gold, #c9a227);
+}
+html[data-theme-base="dark"] .theme-fab:hover { border-color: #64748b; }
+
+.theme-fab.in-topbar { margin-left: 12px; }
+.theme-fab.in-appbar { margin-left: auto; }
+.theme-fab.is-float { float: right; margin: 0 0 8px 12px; }
+.theme-fab.is-fixed { position: fixed; top: 16px; right: 16px; z-index: 980; }
+.theme-fab-group { display: flex; align-items: center; }
+
+/* On a phone the app bar carries the switch, so the page's own copy goes. */
+@media (max-width: 1024px) {
+    html.theme-has-appbar .theme-fab:not(.in-appbar) { display: none; }
+}
+
+@media print {
+    .theme-fab { display: none; }
+    /* Paper is printed as the page was written. */
+    html[data-theme-invert],
+    html[data-theme-invert] img,
+    html[data-theme-invert] .rf-page {
+        filter: none;
+    }
+}
+
+/* ── Appearance card (student_settings.php, registrar_settings.php) ────────────
+   Written in each side's own base palette; the other mode comes from the
+   inversion above like everything else. */
+.theme-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+.theme-choice {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.theme-choice:hover { border-color: #94a3b8; }
+.theme-choice[aria-pressed="true"] {
+    border-color: var(--primary-color, #1a365d);
+    background: #f1f5f9;
+}
+.theme-choice-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: #e2e8f0;
+    color: var(--primary-color, #1a365d);
+    font-size: 18px;
+}
+.theme-choice strong { display: block; font-size: 14.5px; font-weight: 700; }
+.theme-choice small { display: block; margin-top: 2px; font-size: 12.5px; color: #64748b; }
+.theme-choice-check {
+    margin-left: auto;
+    color: var(--primary-color, #1a365d);
+    font-size: 18px;
+    visibility: hidden;
+}
+.theme-choice[aria-pressed="true"] .theme-choice-check { visibility: visible; }
+.theme-note { margin: 14px 0 0; font-size: 12.5px; color: #64748b; }
+
+/* The registrar's pages are written dark. */
+html[data-theme-base="dark"] .theme-choice {
+    border-color: #334155;
+    background: #0f172a;
+    color: #f1f5f9;
+}
+html[data-theme-base="dark"] .theme-choice:hover { border-color: #64748b; }
+html[data-theme-base="dark"] .theme-choice[aria-pressed="true"] {
+    border-color: var(--accent-gold, #c9a227);
+    background: #172033;
+}
+html[data-theme-base="dark"] .theme-choice-icon {
+    background: #1e293b;
+    color: var(--accent-gold, #c9a227);
+}
+html[data-theme-base="dark"] .theme-choice-check { color: var(--accent-gold, #c9a227); }
+html[data-theme-base="dark"] .theme-choice small,
+html[data-theme-base="dark"] .theme-note { color: #94a3b8; }
+
+@media (max-width: 560px) {
+    .theme-choices { grid-template-columns: 1fr; }
+}

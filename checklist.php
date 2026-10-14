@@ -74,6 +74,8 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Document Checklist - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -504,6 +506,19 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
             .ck-ring { width: 56px; height: 56px; }
             .ck-name { font-size: 13.5px; }
             .doc-status { white-space: normal; }
+        }
+
+        /* Phones: the summary (title, count, ring, bar, chips) stacks and centres,
+           instead of the title sitting left with the ring squeezed beside it. */
+        @media (max-width: 600px) {
+            .ck-head-top { flex-direction: column; align-items: center; gap: 12px; }
+            .ck-head-top > div:first-child { width: 100%; }
+            .ck-head h3 { justify-content: center; }
+            .ck-sub { margin-left: auto; margin-right: auto; text-align: center; }
+            .ck-ring { width: 72px; height: 72px; }
+            .ck-ring::before { inset: 8px; }
+            .ck-ring-num { font-size: 16px; }
+            .ck-legend { justify-content: center; }
         }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
@@ -1013,6 +1028,8 @@ $greeting = ($hour < 12) ? "Good Morning" : (($hour < 17) ? "Good Afternoon" : "
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
 </head>
 <body class="student-shell">
 <div class="dashboard">

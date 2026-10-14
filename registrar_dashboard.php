@@ -37,22 +37,32 @@ $initials = strtoupper(substr($user_data['first_name'] ?? 'R', 0, 1) . substr($u
 // --- FETCH DASHBOARD STATISTICS ---
 $stats = ['total_docs' => 0, 'approved' => 0, 'pending' => 0, 'active_students' => 0];
 
-// Active Students (Verified accounts)
-$res = $mysqli->query("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND is_verified = 2");
-if ($res) $stats['active_students'] = $res->fetch_assoc()['count'];
+// The four cards count this registrar's institution only - the same scope as
+// Recent Submissions below and as Submissions / Analytics, which they link to.
+$stats_inst = $user_data['institution'] ?? '';
+$stats_scope = $stats_inst !== '' ? ' AND u.institution = ?' : '';
+$stats_query = function ($sql) use ($mysqli, $stats_inst, $stats_scope) {
+    $stmt = $mysqli->prepare($sql);
+    if (!$stmt) return [];
+    if ($stats_scope !== '') $stmt->bind_param('s', $stats_inst);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc() ?: [];
+    $stmt->close();
+    return $row;
+};
+
+// Active Students: verified accounts, as Analytics counts them
+$stats['active_students'] = (int)($stats_query("SELECT COUNT(*) AS count FROM users u
+    WHERE u.role = 'student' AND u.is_verified = 2" . $stats_scope)['count'] ?? 0);
 
 // Document Submissions (Counts)
-$res = $mysqli->query("SELECT 
-    COUNT(*) as total,
-    SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
-    FROM documents");
-if ($res) {
-    $data = $res->fetch_assoc();
-    $stats['total_docs'] = $data['total'] ?? 0;
-    $stats['approved'] = $data['approved'] ?? 0;
-    $stats['pending'] = $data['pending'] ?? 0;
-}
+$data = $stats_query("SELECT COUNT(*) AS total,
+    SUM(CASE WHEN d.status = 'approved' THEN 1 ELSE 0 END) AS approved,
+    SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending
+    FROM documents d JOIN users u ON d.user_id = u.id WHERE 1 = 1" . $stats_scope);
+$stats['total_docs'] = (int)($data['total'] ?? 0);
+$stats['approved'] = (int)($data['approved'] ?? 0);
+$stats['pending'] = (int)($data['pending'] ?? 0);
 $pending_count = $stats['pending'];
 
 // Fetch pending students count for notification badge
@@ -71,19 +81,54 @@ if (!empty($user_inst)) {
 }
 
 // Recent Submissions List — scoped to this registrar's institution, like the counts above
+//
+// The card has a tab per status. Filtering only the five newest files would
+// leave a tab empty whenever newer uploads pushed its rows out, so each status
+// brings its own five newest as well; every row says whether it is one of the
+// five newest overall (`in_recent`, the default "Recent" tab). The number on a
+// tab is the real total for that status, not the handful listed.
 $recent_submissions = [];
+$recent_counts = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
 $sub_query = "SELECT d.*, u.first_name, u.middle_name, u.last_name, u.student_id FROM documents d
               JOIN users u ON d.user_id = u.id ";
-if (!empty($user_inst)) {
-    $sub_stmt = $mysqli->prepare($sub_query . "WHERE u.institution = ? ORDER BY d.uploaded_at DESC LIMIT 5");
-    $sub_stmt->bind_param("s", $user_inst);
-    $sub_stmt->execute();
-    $res = $sub_stmt->get_result();
-    if ($res) while($row = $res->fetch_assoc()) $recent_submissions[] = $row;
-    $sub_stmt->close();
-} else {
-    $res = $mysqli->query($sub_query . "ORDER BY d.uploaded_at DESC LIMIT 5");
-    if ($res) while($row = $res->fetch_assoc()) $recent_submissions[] = $row;
+
+$recent_fetch = function ($status = null) use ($mysqli, $sub_query, $user_inst) {
+    $where = [];
+    $types = '';
+    $params = [];
+    if (!empty($user_inst)) { $where[] = 'u.institution = ?'; $types .= 's'; $params[] = $user_inst; }
+    if ($status !== null)   { $where[] = 'd.status = ?';      $types .= 's'; $params[] = $status; }
+    $stmt = $mysqli->prepare($sub_query . ($where ? 'WHERE ' . implode(' AND ', $where) . ' ' : '') . 'ORDER BY d.uploaded_at DESC, d.id DESC LIMIT 5');
+    if (!$stmt) return [];
+    if ($types !== '') $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $rows;
+};
+
+foreach ($recent_fetch() as $row) {
+    $recent_submissions[(int)$row['id']] = $row + ['in_recent' => true];
+}
+foreach (array_keys($recent_counts) as $recent_status) {
+    foreach ($recent_fetch($recent_status) as $row) {
+        if (!isset($recent_submissions[(int)$row['id']])) {
+            $recent_submissions[(int)$row['id']] = $row + ['in_recent' => false];
+        }
+    }
+}
+usort($recent_submissions, fn($a, $b) => [$b['uploaded_at'], $b['id']] <=> [$a['uploaded_at'], $a['id']]);
+
+$count_stmt = $mysqli->prepare("SELECT d.status, COUNT(*) AS n FROM documents d JOIN users u ON d.user_id = u.id "
+    . (!empty($user_inst) ? "WHERE u.institution = ? " : "") . "GROUP BY d.status");
+if ($count_stmt) {
+    if (!empty($user_inst)) $count_stmt->bind_param("s", $user_inst);
+    $count_stmt->execute();
+    foreach ($count_stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+        $key = strtolower((string)$row['status']);
+        if (isset($recent_counts[$key])) $recent_counts[$key] = (int)$row['n'];
+    }
+    $count_stmt->close();
 }
 
 // --- FETCH PENDING STUDENT REGISTRATIONS ---
@@ -107,6 +152,8 @@ if (!empty($user_inst)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Registrar Dashboard - School Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
@@ -465,6 +512,22 @@ if (!empty($user_inst)) {
             cursor: pointer;
         }
 
+        /* Each card is a link: to its page, or to its tab of Recent Submissions */
+        .stat-card { color: inherit; }
+        .stat-card:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 3px; }
+        .stat-link {
+            display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+            font-size: 0.72rem; font-weight: 600; color: var(--text-muted);
+            opacity: 0.75; transition: color 0.2s, opacity 0.2s;
+        }
+        .stat-link i { font-size: 0.65rem; transition: transform 0.2s; }
+        .stat-card:hover .stat-link, .stat-card:focus-visible .stat-link { color: var(--accent-gold); opacity: 1; }
+        .stat-card:hover .stat-link i { transform: translateX(3px); }
+        @media (max-width: 1024px) { .stat-link { display: none; } }
+        /* The card a stat card jumped to blinks once, so the eye lands on it */
+        .table-card.is-flash { animation: cardFlash 1.2s ease; }
+        @keyframes cardFlash { 0%, 100% { box-shadow: none; } 25% { box-shadow: 0 0 0 2px var(--accent-gold); } }
+
         .stat-card:hover {
             transform: translateY(-5px);
             background: rgba(255, 255, 255, 0.08);
@@ -544,6 +607,40 @@ if (!empty($user_inst)) {
         }
 
         .view-all:hover { text-decoration: underline; }
+
+        /* Recent Submissions: a tab per status, like the Submissions / Rejected pages */
+        .recent-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 16px; }
+        .recent-tab {
+            display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+            padding: 6px 12px; border-radius: 20px; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.09); background: transparent;
+            color: var(--text-secondary); font-family: inherit; font-size: 0.78rem; font-weight: 600;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .recent-tab:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
+        .recent-tab:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+        .recent-tab.is-active { background: rgba(201,162,39,0.14); border-color: var(--accent-gold); color: var(--accent-gold); }
+        .recent-dot { width: 7px; height: 7px; border-radius: 50%; background: #64748b; }
+        .recent-tab[data-status="pending"] .recent-dot  { background: #f59e0b; }
+        .recent-tab[data-status="approved"] .recent-dot { background: #10b981; }
+        .recent-tab[data-status="rejected"] .recent-dot { background: #ef4444; }
+        .recent-count {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 19px; height: 19px; padding: 0 6px; border-radius: 10px;
+            background: rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 0.68rem; font-weight: 700;
+        }
+        .recent-tab[data-status="pending"] .recent-count.has  { background: #f59e0b; color: #1e293b; }
+        .recent-tab[data-status="approved"] .recent-count.has { background: #10b981; color: #052e1f; }
+        .recent-tab[data-status="rejected"] .recent-count.has { background: #ef4444; color: #fff; }
+        .recent-empty { margin: 0; padding: 30px 0 14px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+        .recent-empty[hidden] { display: none; }
+        .doc-type-name { display: block; font-weight: 600; }
+        .doc-file-sub { display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
+        @media (max-width: 600px) {
+            /* One row that scrolls sideways instead of wrapping into three */
+            .recent-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
+            .recent-tabs::-webkit-scrollbar { display: none; }
+        }
 
         table {
             width: 100%;
@@ -1098,49 +1195,62 @@ if (!empty($user_inst)) {
             <div id="dashboard-section" class="content-section active">
             <!-- STAT CARDS -->
             <div class="stat-cards">
-                <div class="stat-card">
+                <a class="stat-card" href="submissions.php">
                     <div class="stat-card-header">
                         <div class="stat-icon blue"><i class="fas fa-folder-open"></i></div>
+                        <span class="stat-link">Open submissions <i class="fas fa-arrow-right"></i></span>
                     </div>
                     <div class="stat-value"><?= number_format($stats['total_docs']) ?></div>
                     <div class="stat-label">Total Documents</div>
-                </div>
+                </a>
 
-                <div class="stat-card">
+                <a class="stat-card" href="#recentSubmissionsCard" data-recent-tab="approved">
                     <div class="stat-card-header">
                         <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                        <span class="stat-link">Show approved <i class="fas fa-arrow-right"></i></span>
                     </div>
                     <div class="stat-value"><?= number_format($stats['approved']) ?></div>
                     <div class="stat-label">Approved Submissions</div>
-                </div>
+                </a>
 
-                <div class="stat-card">
+                <a class="stat-card" href="#recentSubmissionsCard" data-recent-tab="pending">
                     <div class="stat-card-header">
                         <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+                        <span class="stat-link">Show pending <i class="fas fa-arrow-right"></i></span>
                     </div>
                     <div class="stat-value"><?= number_format($stats['pending']) ?></div>
                     <div class="stat-label">Pending Review</div>
-                </div>
+                </a>
 
-                <div class="stat-card">
+                <a class="stat-card" href="analytics.php">
                     <div class="stat-card-header">
                         <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+                        <span class="stat-link">Open analytics <i class="fas fa-arrow-right"></i></span>
                     </div>
                     <div class="stat-value"><?= number_format($stats['active_students']) ?></div>
                     <div class="stat-label">Active Students</div>
-                </div>
+                </a>
             </div>
 
             <!-- BOTTOM SECTION -->
             <div class="bottom-section">
 
                 <!-- RECENT SUBMISSIONS -->
-                <div class="table-card">
+                <div class="table-card" id="recentSubmissionsCard">
                     <div class="card-header">
                         <h2>Recent Submissions</h2>
-                        <a href="submissions.php" class="view-all">View All →</a>
+                        <a href="submissions.php" class="view-all" id="recentViewAll">View All →</a>
                     </div>
-                    <table>
+                    <div class="recent-tabs" role="group" aria-label="Filter recent submissions by status">
+                        <button type="button" class="recent-tab is-active" data-status="all" aria-pressed="true"><i class="fas fa-clock-rotate-left"></i> Recent</button>
+                        <?php foreach (['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $tab_key => $tab_label): ?>
+                            <button type="button" class="recent-tab" data-status="<?= $tab_key ?>" aria-pressed="false">
+                                <span class="recent-dot"></span><?= $tab_label ?>
+                                <span class="recent-count<?= $recent_counts[$tab_key] > 0 ? ' has' : '' ?>"><?= $recent_counts[$tab_key] ?></span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <table id="recentSubmissionsTable">
                         <thead>
                             <tr>
                                 <th>Student ID</th>
@@ -1159,14 +1269,21 @@ if (!empty($user_inst)) {
                                 </td>
                             </tr>
                         <?php else: ?>
-                            <?php foreach ($recent_submissions as $sub): ?>
-                                <tr>
+                            <?php foreach ($recent_submissions as $sub):
+                                $recent_ext  = strtolower(pathinfo($sub['file_path'] ?? '', PATHINFO_EXTENSION));
+                                $recent_pdf  = $recent_ext === 'pdf';
+                                $recent_type = trim((string)($sub['document_type'] ?? ''));
+                            ?>
+                                <tr data-status="<?= htmlspecialchars(strtolower($sub['status'])) ?>" data-recent="<?= !empty($sub['in_recent']) ? '1' : '0' ?>"<?= empty($sub['in_recent']) ? ' style="display:none"' : '' ?>>
                                     <td data-label="Student ID" class="cell-student-id"><?= htmlspecialchars(formatStudentId($sub['student_id'] ?? '')) ?></td>
                                     <td data-label="Student" class="cell-student-name"><?= htmlspecialchars(formatPersonNameRow($sub)) ?></td>
                                     <td data-label="Document">
                                         <div class="doc-cell">
-                                            <div class="doc-icon pdf"><i class="fas fa-file-pdf"></i></div>
-                                            <span class="doc-name"><?= htmlspecialchars($sub['file_name']) ?></span>
+                                            <div class="doc-icon <?= $recent_pdf ? 'pdf' : 'img' ?>"><i class="fas <?= $recent_pdf ? 'fa-file-pdf' : 'fa-file-image' ?>"></i></div>
+                                            <span class="doc-name">
+                                                <?php if ($recent_type !== ''): ?><strong class="doc-type-name"><?= htmlspecialchars($recent_type) ?></strong><?php endif; ?>
+                                                <span class="<?= $recent_type !== '' ? 'doc-file-sub' : '' ?>"><?= htmlspecialchars($sub['file_name']) ?></span>
+                                            </span>
                                         </div>
                                     </td>
                                     <td data-label="Date"><?= date('M d, Y', strtotime($sub['uploaded_at'])) ?></td>
@@ -1187,6 +1304,7 @@ if (!empty($user_inst)) {
                         <?php endif; ?>
                         </tbody>
                     </table>
+                    <p class="recent-empty" id="recentEmpty" hidden></p>
                 </div>
 
                 <!-- RECENT ACTIVITY -->
@@ -1318,10 +1436,59 @@ if (!empty($user_inst)) {
         // Search functionality
         // Searches the tables of the section on screen (search_helper.js: every
         // word, any order, buttons ignored), and again whenever the section changes.
+        // Recent Submissions adds its status tab as the search's extra condition:
+        // "Recent" keeps the five newest files, a status tab that status's newest.
+        let recentStatus = 'all';
+        const recentTable = document.getElementById('recentSubmissionsTable');
+        const recentRowOk = row => {
+            if (!row.hasAttribute('data-status')) return true;          // a row of another table
+            return recentStatus === 'all' ? row.dataset.recent === '1' : row.dataset.status === recentStatus;
+        };
+
         window.runDashboardSearch = SearchKit.bind(document.getElementById('dashboardSearch'), function () {
             let activeSection = document.querySelector('.content-section.active');
             if (!activeSection) return;
-            SearchKit.filterTables(document.getElementById('dashboardSearch'), Array.from(activeSection.querySelectorAll('table')));
+            const input = document.getElementById('dashboardSearch');
+            const entries = SearchKit.filterTables(input, Array.from(activeSection.querySelectorAll('table')), recentRowOk);
+
+            // A tab with nothing in it says so (while searching, the search's own "No results" row does).
+            const empty = document.getElementById('recentEmpty');
+            const mine = entries.find(e => e.table === recentTable);
+            if (empty && mine) {
+                const searching = SearchKit.tokens(input ? input.value : '').length > 0;
+                empty.hidden = !(mine.total > 0 && mine.shown === 0 && !searching);
+                empty.textContent = recentStatus === 'all' ? 'No recent submissions.' : 'No ' + recentStatus + ' documents.';
+            }
+        });
+
+        // Approved / Pending stat cards open that tab of Recent Submissions.
+        document.querySelectorAll('.stat-card[data-recent-tab]').forEach(card => {
+            card.addEventListener('click', e => {
+                const tab = document.querySelector('.recent-tab[data-status="' + card.dataset.recentTab + '"]');
+                const target = document.getElementById('recentSubmissionsCard');
+                if (!tab || !target) return;
+                e.preventDefault();
+                tab.click();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                target.classList.remove('is-flash');
+                void target.offsetWidth;            // restart the animation on a second click
+                target.classList.add('is-flash');
+            });
+        });
+
+        document.querySelectorAll('.recent-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                recentStatus = tab.dataset.status;
+                document.querySelectorAll('.recent-tab').forEach(other => {
+                    const on = other === tab;
+                    other.classList.toggle('is-active', on);
+                    other.setAttribute('aria-pressed', String(on));
+                });
+                // "View All" goes where that status lives.
+                const link = document.getElementById('recentViewAll');
+                if (link) link.href = recentStatus === 'rejected' ? 'reject.php' : 'submissions.php';
+                window.runDashboardSearch();
+            });
         });
 
         function openRejectModal(id, type) {

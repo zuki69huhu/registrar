@@ -59,6 +59,8 @@ if (!empty($user_inst)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Academic Calendar - Registrar Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -195,6 +197,20 @@ if (!empty($user_inst)) {
         .fc .fc-button-active { background-color: var(--accent-gold) !important; }
         .fc-event { cursor: pointer; padding: 2px 5px; white-space: normal !important; overflow: hidden; }
         .fc-event-title { white-space: normal !important; word-wrap: break-word; font-size: 0.85rem; }
+        /* The list view: FullCalendar paints its day headings light grey, which
+           hid the light text of this dark page. */
+        .fc .fc-list-day-cushion, .fc .fc-list-table th { background: #0f172a; color: var(--text-primary, #f1f5f9); }
+        .fc .fc-list-event:hover td { background: rgba(255,255,255,0.04); }
+        .fc-theme-standard .fc-list, .fc-theme-standard .fc-list td, .fc-theme-standard .fc-list th { border-color: rgba(255,255,255,0.08); }
+        .fc .fc-list-empty { background: transparent; color: var(--text-muted, #94a3b8); }
+        /* In the month grid on a phone a day is ~45px wide: one clipped line reads
+           better than a title broken into single syllables. */
+        @media (max-width: 640px) {
+            .fc-daygrid-event, .fc-daygrid-event .fc-event-title { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem; }
+            .fc-daygrid-event { padding: 1px 3px; }
+            .fc .fc-toolbar { flex-wrap: wrap; gap: 8px; justify-content: center; }
+            .fc .fc-toolbar-title { font-size: 1.1rem; }
+        }
 
         /* Mobile Menu Button */
         .mobile-toggle {
@@ -354,7 +370,7 @@ if (!empty($user_inst)) {
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
             var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
+                initialView: window.innerWidth < 640 ? 'listMonth' : 'dayGridMonth', // a phone starts on the readable list
                 selectable: true,
                 height: 550,
                 eventSources: [
@@ -416,7 +432,7 @@ if (!empty($user_inst)) {
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,listMonth'
                 },
-                initialView: 'dayGridMonth',
+                initialView: window.innerWidth < 640 ? 'listMonth' : 'dayGridMonth', // a phone starts on the readable list
                 select: function(info) {
                     document.getElementById('eventModal').style.display = 'flex';
                     // Auto-fill date

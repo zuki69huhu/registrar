@@ -62,6 +62,8 @@ $first_name = $user_data['first_name'] ?? 'S';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Notifications - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -222,6 +224,8 @@ $first_name = $user_data['first_name'] ?? 'S';
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
 </head>
 <body class="student-shell">
     <header class="mobile-appbar">

@@ -153,6 +153,12 @@ if (!empty($user_inst)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php if ($role === 'student'): ?>
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <?php else: ?>
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <?php endif; ?>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Submissions - <?= ucfirst($role) ?> Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -417,6 +423,22 @@ if (!empty($user_inst)) {
             body:not(.student-mode) .main, body.student-mode .main { margin-left: 0; padding: 0; }
             .mobile-topbar-logo { display: block !important; }
         }
+
+        /* A student on a phone has the app bar like every other student page, so
+           the floating-button room (padding-left: 65px) and the second logo go:
+           the title sits at the left edge and the search box runs full width. */
+        @media (max-width: 1024px) {
+            body.student-mode .mobile-topbar-logo { display: none !important; }
+            body.student-mode .topbar { padding: 4px 16px 0 !important; margin-bottom: 16px; gap: 14px; }
+            body.student-mode .topbar-left { gap: 0 !important; }
+            body.student-mode .topbar-left h1 { font-size: 22px; line-height: 1.25; }
+            body.student-mode .topbar-left p { font-size: 13.5px; margin-top: 2px; }
+            body.student-mode .topbar-right { width: 100%; }
+            body.student-mode .search-bar { width: 100%; padding: 11px 14px; }
+            body.student-mode .content { padding: 0 16px 20px !important; }
+        }
+        /* Below 480px the page's own rules pull the card out to 8px; the title follows it. */
+        @media (max-width: 480px) { body.student-mode .topbar { padding: 4px 8px 0 !important; } }
         /* Responsive Table */
         @media (max-width: 768px) {
             .table-responsive {
@@ -518,14 +540,6 @@ if (!empty($user_inst)) {
                 box-sizing: border-box !important;
                 text-align: center !important;
                 white-space: nowrap !important;
-            }
-            .row-actions .btn-view {
-                background: #2563eb !important;
-                color: #ffffff !important;
-                box-shadow: 0 2px 6px rgba(37,99,235,0.2) !important;
-            }
-            .row-actions .btn-view:hover, .row-actions .btn-view:active {
-                background: #1d4ed8 !important;
             }
         }
         @media (max-width: 480px) {
@@ -663,12 +677,43 @@ if (!empty($user_inst)) {
             background: rgba(245,158,11,0.15); color: #f59e0b;
             font-size: 0.75rem; font-weight: 600;
         }
+        /* Row action buttons (View / Accept / Reject / Change). Soft tinted pills
+           that sit quietly on the card and fill with their colour on hover: blue
+           looks, green approves, red rejects, amber reopens a decision. The
+           registrar's dark palette first, then the student's light one. */
+        .row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .action-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 7px 13px; border-radius: 8px; border: 1px solid transparent;
+            font-family: inherit; font-size: 0.78rem; font-weight: 600; line-height: 1.2;
+            white-space: nowrap; text-decoration: none; cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        }
+        .action-btn i { font-size: 0.82em; }
+        .action-btn:active { transform: scale(0.96); }
+        .action-btn:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+        .btn-view, .btn-files { background: rgba(59,130,246,0.14); color: #93c5fd; border-color: rgba(59,130,246,0.35); }
+        .btn-view:hover, .btn-files:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+        .btn-approve { background: rgba(16,185,129,0.14); color: #6ee7b7; border-color: rgba(16,185,129,0.38); }
+        .btn-approve:hover { background: #10b981; color: #fff; border-color: #10b981; }
+        .btn-reject { background: rgba(239,68,68,0.14); color: #fca5a5; border-color: rgba(239,68,68,0.38); }
+        .btn-reject:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+        .btn-undo { background: rgba(245,158,11,0.12); color: #fcd34d; border-color: rgba(245,158,11,0.35); }
+        .btn-undo:hover { background: #f59e0b; color: #1e293b; border-color: #f59e0b; }
+        body.student-mode .action-btn:focus-visible { outline-color: var(--primary-color); }
+        body.student-mode .btn-view, body.student-mode .btn-files { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        body.student-mode .btn-view:hover, body.student-mode .btn-files:hover { background: #2563eb; color: #fff; border-color: #2563eb; }
+        body.student-mode .btn-approve { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        body.student-mode .btn-approve:hover { background: #059669; color: #fff; border-color: #059669; }
+        body.student-mode .btn-reject { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        body.student-mode .btn-reject:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
+        body.student-mode .btn-undo { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        body.student-mode .btn-undo:hover { background: #d97706; color: #fff; border-color: #d97706; }
         .review-count {
             display: inline-flex; align-items: center; justify-content: center;
             min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
             background: #ef4444; color: #fff; font-size: 0.7rem; font-weight: 700;
         }
-        .btn-files { background: rgba(59,130,246,0.14); color: #93c5fd; border: 1px solid rgba(59,130,246,0.35); }
         .stu-row.is-open .btn-files { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
 
         /* The opened file list */
@@ -777,7 +822,7 @@ if (!empty($user_inst)) {
         }
     </style>
     <?php if ($role === 'student'): ?>
-    <link rel="stylesheet" href="student_mobile.css?v=2">
+    <link rel="stylesheet" href="student_mobile.css?v=4">
     <?php endif; ?>
     <link rel="stylesheet" href="registrar_mobile.css?v=2">
     <link rel="stylesheet" href="student_sidebar.css?v=1">
@@ -786,6 +831,10 @@ if (!empty($user_inst)) {
     <link rel="stylesheet" href="doc_viewer.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
+    <?php if ($role === 'student'): ?>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
+    <?php endif; ?>
 </head>
 <body class="<?= $role === 'student' ? 'student-mode' : '' ?>">
     <header class="mobile-appbar">
@@ -995,32 +1044,32 @@ if (!empty($user_inst)) {
                         </select>
                         <select id="sectionFilter" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--main-bg); color: var(--text-primary); font-family: inherit;">
                             <option value="">All Sections</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                            <option value="E">E</option>
-                            <option value="F">F</option>
-                            <option value="G">G</option>
-                            <option value="H">H</option>
-                            <option value="I">I</option>
-                            <option value="J">J</option>
-                            <option value="K">K</option>
-                            <option value="L">L</option>
-                            <option value="M">M</option>
-                            <option value="N">N</option>
-                            <option value="O">O</option>
-                            <option value="P">P</option>
-                            <option value="Q">Q</option>
-                            <option value="R">R</option>
-                            <option value="S">S</option>
-                            <option value="T">T</option>
-                            <option value="U">U</option>
-                            <option value="V">V</option>
-                            <option value="W">W</option>
-                            <option value="X">X</option>
-                            <option value="Y">Y</option>
-                            <option value="Z">Z</option>
+                            <option value="A">Section A</option>
+                            <option value="B">Section B</option>
+                            <option value="C">Section C</option>
+                            <option value="D">Section D</option>
+                            <option value="E">Section E</option>
+                            <option value="F">Section F</option>
+                            <option value="G">Section G</option>
+                            <option value="H">Section H</option>
+                            <option value="I">Section I</option>
+                            <option value="J">Section J</option>
+                            <option value="K">Section K</option>
+                            <option value="L">Section L</option>
+                            <option value="M">Section M</option>
+                            <option value="N">Section N</option>
+                            <option value="O">Section O</option>
+                            <option value="P">Section P</option>
+                            <option value="Q">Section Q</option>
+                            <option value="R">Section R</option>
+                            <option value="S">Section S</option>
+                            <option value="T">Section T</option>
+                            <option value="U">Section U</option>
+                            <option value="V">Section V</option>
+                            <option value="W">Section W</option>
+                            <option value="X">Section X</option>
+                            <option value="Y">Section Y</option>
+                            <option value="Z">Section Z</option>
                         </select>
                     </div>
                     <?php else: ?>

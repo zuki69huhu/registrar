@@ -73,7 +73,7 @@ if (!empty($user_inst)) {
 
 if ($role === 'registrar') {
     if (!empty($user_institution)) {
-        $query = "SELECT d.id, d.file_name as document_name, d.file_path, d.uploaded_at as submitted_at, d.status, d.feedback, d.document_type, d.reviewed_at, r.first_name AS reviewer_first, r.last_name AS reviewer_last, u.first_name, u.middle_name, u.last_name, u.student_id, u.course, u.year_level, u.section 
+        $query = "SELECT d.id, d.file_name as document_name, d.file_path, d.uploaded_at as submitted_at, d.status, d.feedback, d.document_type, d.reviewed_at, r.first_name AS reviewer_first, r.last_name AS reviewer_last, u.id AS student_uid, u.first_name, u.middle_name, u.last_name, u.student_id, u.course, u.year_level, u.section 
                   FROM documents d 
                   JOIN users u ON d.user_id = u.id 
                   LEFT JOIN users r ON d.reviewed_by = r.id 
@@ -89,7 +89,7 @@ if ($role === 'registrar') {
         }
         $stmt->close();
     } else {
-        $query = "SELECT d.id, d.file_name as document_name, d.file_path, d.uploaded_at as submitted_at, d.status, d.feedback, d.document_type, d.reviewed_at, r.first_name AS reviewer_first, r.last_name AS reviewer_last, u.first_name, u.middle_name, u.last_name, u.student_id, u.course, u.year_level, u.section 
+        $query = "SELECT d.id, d.file_name as document_name, d.file_path, d.uploaded_at as submitted_at, d.status, d.feedback, d.document_type, d.reviewed_at, r.first_name AS reviewer_first, r.last_name AS reviewer_last, u.id AS student_uid, u.first_name, u.middle_name, u.last_name, u.student_id, u.course, u.year_level, u.section 
                   FROM documents d 
                   JOIN users u ON d.user_id = u.id 
                   LEFT JOIN users r ON d.reviewed_by = r.id 
@@ -103,11 +103,11 @@ if ($role === 'registrar') {
     }
 } else {
     // If student, only show their own documents
-    $stmt = $mysqli->prepare("SELECT d.id, d.file_name as document_name, d.file_path, d.uploaded_at as submitted_at, d.status, d.feedback, d.document_type, d.reviewed_at, r.first_name AS reviewer_first, r.last_name AS reviewer_last, u.first_name, u.middle_name, u.last_name, u.student_id, u.course, u.year_level, u.section 
+    $stmt = $mysqli->prepare("SELECT d.id, d.file_name as document_name, d.file_path, d.uploaded_at as submitted_at, d.status, d.feedback, d.document_type, d.reviewed_at, r.first_name AS reviewer_first, r.last_name AS reviewer_last, u.id AS student_uid, u.first_name, u.middle_name, u.last_name, u.student_id, u.course, u.year_level, u.section 
                               FROM documents d 
                               JOIN users u ON d.user_id = u.id 
                   LEFT JOIN users r ON d.reviewed_by = r.id 
-                              WHERE d.user_id = ? 
+                              WHERE d.user_id = ? AND d.status = 'rejected'
                               ORDER BY d.uploaded_at DESC");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -115,12 +115,35 @@ if ($role === 'registrar') {
     if ($res) while($row = $res->fetch_assoc()) $submissions[] = $row;
     $stmt->close();
 }
+
+// Registrar view: one row per student, their rejected files open underneath -
+// the same layout as submissions.php. The query is newest first, so a student
+// takes the place of their most recent rejected upload.
+$student_groups = [];
+if ($role === 'registrar') {
+    foreach ($submissions as $sub) {
+        $uid = (int)$sub['student_uid'];
+        if (!isset($student_groups[$uid])) {
+            $student_groups[$uid] = ['student' => $sub, 'docs' => [], 'latest' => ''];
+        }
+        $student_groups[$uid]['docs'][] = $sub;
+        if (($sub['submitted_at'] ?? '') > $student_groups[$uid]['latest']) {
+            $student_groups[$uid]['latest'] = $sub['submitted_at'];
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php if ($role === 'student'): ?>
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <?php else: ?>
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <?php endif; ?>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Submissions - <?= ucfirst($role) ?> Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -277,6 +300,22 @@ if ($role === 'registrar') {
             body:not(.student-mode) .main, body.student-mode .main { margin-left: 0; padding: 0; }
             .mobile-topbar-logo { display: block !important; }
         }
+
+        /* A student on a phone has the app bar like every other student page, so
+           the floating-button room (padding-left: 65px) and the second logo go:
+           the title sits at the left edge and the search box runs full width. */
+        @media (max-width: 1024px) {
+            body.student-mode .mobile-topbar-logo { display: none !important; }
+            body.student-mode .topbar { padding: 4px 16px 0 !important; margin-bottom: 16px; gap: 14px; }
+            body.student-mode .topbar-left { gap: 0 !important; }
+            body.student-mode .topbar-left h1 { font-size: 22px; line-height: 1.25; }
+            body.student-mode .topbar-left p { font-size: 13.5px; margin-top: 2px; }
+            body.student-mode .topbar-right { width: 100%; }
+            body.student-mode .search-bar { width: 100%; padding: 11px 14px; }
+            body.student-mode .content { padding: 0 16px 20px !important; }
+        }
+        /* Below 480px the page's own rules pull the card out to 8px; the title follows it. */
+        @media (max-width: 480px) { body.student-mode .topbar { padding: 4px 8px 0 !important; } }
         /* Responsive Table */
         @media (max-width: 768px) {
             .table-responsive {
@@ -377,24 +416,44 @@ if ($role === 'registrar') {
                 text-align: center !important;
                 white-space: nowrap !important;
             }
-            .row-actions .btn-view {
-                background: #2563eb !important;
-                color: #ffffff !important;
-                box-shadow: 0 2px 6px rgba(37,99,235,0.2) !important;
-            }
         }
         @media (max-width: 480px) {
             .table-card { padding: 12px 10px !important; }
             body:not(.student-mode) .content, body.student-mode .content { padding: 12px 8px !important; }
         }
 
+        /* Row action buttons (View / Accept / Reject / Change). Soft tinted pills
+           that sit quietly on the card and fill with their colour on hover: blue
+           looks, green approves, red rejects, amber reopens a decision. The
+           registrar's dark palette first, then the student's light one. */
+        .row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .action-btn {
-            padding: 6px 12px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 7px 13px; border-radius: 8px; border: 1px solid transparent;
+            font-family: inherit; font-size: 0.78rem; font-weight: 600; line-height: 1.2;
+            white-space: nowrap; text-decoration: none; cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
         }
-        .btn-approve { background: #10b981; color: white; }
-        .btn-reject { background: #ef4444; color: white; }
-        .btn-view { background: #3b82f6; color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
-        .action-btn:hover { opacity: 0.8; }
+        .action-btn i { font-size: 0.82em; }
+        .action-btn:active { transform: scale(0.96); }
+        .action-btn:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
+        .btn-view, .btn-files { background: rgba(59,130,246,0.14); color: #93c5fd; border-color: rgba(59,130,246,0.35); }
+        .btn-view:hover, .btn-files:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+        .btn-approve { background: rgba(16,185,129,0.14); color: #6ee7b7; border-color: rgba(16,185,129,0.38); }
+        .btn-approve:hover { background: #10b981; color: #fff; border-color: #10b981; }
+        .btn-reject { background: rgba(239,68,68,0.14); color: #fca5a5; border-color: rgba(239,68,68,0.38); }
+        .btn-reject:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+        .btn-undo { background: rgba(245,158,11,0.12); color: #fcd34d; border-color: rgba(245,158,11,0.35); }
+        .btn-undo:hover { background: #f59e0b; color: #1e293b; border-color: #f59e0b; }
+        body.student-mode .action-btn:focus-visible { outline-color: var(--primary-color); }
+        body.student-mode .btn-view, body.student-mode .btn-files { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        body.student-mode .btn-view:hover, body.student-mode .btn-files:hover { background: #2563eb; color: #fff; border-color: #2563eb; }
+        body.student-mode .btn-approve { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        body.student-mode .btn-approve:hover { background: #059669; color: #fff; border-color: #059669; }
+        body.student-mode .btn-reject { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        body.student-mode .btn-reject:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
+        body.student-mode .btn-undo { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        body.student-mode .btn-undo:hover { background: #d97706; color: #fff; border-color: #d97706; }
 
         /* Back Button */
         .back-button {
@@ -556,8 +615,6 @@ if ($role === 'registrar') {
             font-family: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
         }
         .note-modal-btn:hover { background: #dc2626; }
-        .action-btn { display: inline-flex; align-items: center; gap: 5px; }
-        .row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .reject-modal-content { max-height: 90vh; overflow-y: auto; }
         .reject-doc-name {
             display: block; margin-bottom: 14px; padding: 8px 12px; border-radius: 8px;
@@ -584,7 +641,146 @@ if ($role === 'registrar') {
             .table-filters > * { flex: 1 1 100%; }
             .table-filters button { justify-content: center; }
         }
+        /* ── Registrar: one row per student, their rejected files open underneath ──
+           The same layout as submissions.php, without its checkboxes (nothing is
+           downloaded in bulk from here). */
+        .title-pending {
+            display: inline-flex; align-items: center; vertical-align: middle;
+            margin-left: 8px; padding: 3px 10px; border-radius: 20px;
+            background: rgba(239,68,68,0.15); color: #f87171;
+            font-size: 0.75rem; font-weight: 700;
+        }
+        #submissionsTable tr[hidden], #submissionsTable .doc-item[hidden] { display: none !important; }
+        #submissionsTable.grouped .cell-action { width: 1%; white-space: nowrap; text-align: right; }
+        #submissionsTable.grouped .cell-date { white-space: nowrap; color: var(--text-secondary); }
+
+        .stu-row { cursor: pointer; transition: background 0.15s; }
+        .stu-row:hover > td { background: rgba(255,255,255,0.025); }
+        .stu-row.is-open > td { background: rgba(239,68,68,0.06); border-bottom-color: transparent; }
+        .stu-row .sid { box-shadow: inset 3px 0 0 #ef4444; }
+
+        .stu-name {
+            display: inline-flex; align-items: center; gap: 10px; max-width: 100%;
+            padding: 4px 0; border: none; background: none; cursor: pointer;
+            color: var(--text-primary); font: inherit; font-weight: 600; text-align: left;
+        }
+        .stu-name:hover .stu-fullname { color: var(--accent-blue); text-decoration: underline; text-underline-offset: 3px; }
+        .stu-name:focus-visible, .btn-files:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; border-radius: 6px; }
+        .stu-name .stu small { display: block; margin-top: 2px; font-size: 0.75rem; font-weight: 500; color: var(--text-muted); }
+        .stu-chevron { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+        .stu-row.is-open .stu-chevron { transform: rotate(180deg); color: var(--accent-blue); }
+
+        .review-pill {
+            display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+            padding: 3px 10px 3px 3px; border-radius: 20px;
+            background: rgba(239,68,68,0.14); color: #fca5a5;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .review-count {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+            background: #ef4444; color: #fff; font-size: 0.7rem; font-weight: 700;
+        }
+        .stu-row.is-open .btn-files { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+        /* The opened file list */
+        #submissionsTable .stu-docs > td { padding: 0 0 16px; white-space: normal; }
+        .doc-list {
+            display: flex; flex-direction: column; gap: 6px;
+            margin: 0 0 0 24px; padding: 10px;
+            border-left: 3px solid #ef4444; border-radius: 0 0 10px 10px;
+            background: rgba(15,23,42,0.45);
+            animation: docListIn 0.18s ease;
+        }
+        @keyframes docListIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+        .doc-item {
+            display: grid; align-items: center; column-gap: 14px;
+            grid-template-columns: 34px minmax(0, 1fr) 118px 112px auto;
+            padding: 10px 12px; border-radius: 8px;
+            background: var(--card-bg); border: 1px solid rgba(239,68,68,0.22);
+        }
+        .doc-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(239,68,68,0.13); color: #f87171;
+        }
+        .doc-main { min-width: 0; }
+        .doc-type { font-weight: 600; }
+        .doc-file { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .doc-date { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; }
+        .doc-date i { margin-right: 4px; color: var(--text-muted); }
+        .doc-item .row-actions { justify-content: flex-end; flex-wrap: nowrap; }
+
+        @media (max-width: 1200px) {
+            .doc-item { grid-template-columns: 34px minmax(0, 1fr) 110px 112px; row-gap: 10px; }
+            .doc-item .row-actions { grid-column: 2 / -1; justify-content: flex-start; flex-wrap: wrap; }
+        }
+
+        /* Phones: each student is a compact card; the files open inside it.
+           The page's generic phone table rules above are all !important, so the
+           ones that rearrange a row here have to be too. */
+        @media (max-width: 768px) {
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-row {
+                display: grid !important;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                column-gap: 10px; row-gap: 8px; align-items: center;
+                margin-bottom: 12px !important; padding: 14px 12px !important; border-radius: 12px !important;
+                border-color: rgba(239,68,68,0.3);
+            }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-row > td {
+                display: block !important; padding: 0 !important; border: none !important; background: none;
+                text-align: left; min-width: 0 !important; width: auto !important; word-break: normal !important;
+            }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-row > td::before { content: none !important; }
+            #submissionsTable.grouped .stu-row > .cell-student-name { grid-column: 1 / 3; grid-row: 1; }
+            #submissionsTable.grouped .stu-row > .cell-action  { grid-column: 3; grid-row: 1; }
+            #submissionsTable.grouped .stu-row > .cell-student-id { grid-column: 1; grid-row: 2; }
+            #submissionsTable.grouped .stu-row > .cell-docs    { grid-column: 2 / 4; grid-row: 2; }
+            #submissionsTable.grouped .stu-row > .cell-date    { grid-column: 1 / 4; grid-row: 3; font-size: 0.78rem; white-space: normal; }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-row > td.cell-date::before {
+                content: "Last upload: " !important; display: inline !important; margin: 0 !important;
+                font-size: inherit !important; font-weight: 400 !important; letter-spacing: 0 !important; text-transform: none !important;
+            }
+            #submissionsTable.grouped .stu-name { padding: 0; width: 100%; justify-content: space-between; }
+            #submissionsTable.grouped .stu-name .stu-chevron { display: none; }
+            #submissionsTable.grouped .btn-files { padding: 8px 10px; min-height: 36px; }
+            #submissionsTable.grouped .btn-files-label { display: none; }
+            #submissionsTable.grouped .stu-row.is-open > td { background: none; }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-row.is-open {
+                margin-bottom: 0 !important; border-radius: 12px 12px 0 0 !important;
+                border-color: rgba(239,68,68,0.45); border-bottom-color: transparent;
+            }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-docs {
+                margin: 0 0 12px !important; padding: 0 !important; border-radius: 0 0 12px 12px !important;
+                border-color: rgba(239,68,68,0.45); border-top: none;
+            }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-docs > td {
+                display: block !important; padding: 0 10px 10px !important; border: none !important; text-align: left;
+                word-break: normal !important;
+            }
+            body:not(.student-mode) #submissionsTable.grouped tr.stu-docs > td::before { content: none !important; }
+            .doc-list { margin: 0; padding: 0; border-left: none; background: none; }
+            .doc-item {
+                grid-template-columns: minmax(0, 1fr) auto;
+                column-gap: 10px; row-gap: 8px; padding: 12px 10px;
+                background: rgba(15,23,42,0.5);
+            }
+            .doc-item .doc-icon { display: none; }
+            .doc-item .doc-main   { grid-column: 1; grid-row: 1; }
+            .doc-item .doc-status { grid-column: 2; grid-row: 1; align-self: start; }
+            .doc-item .doc-date   { grid-column: 1 / -1; grid-row: 2; }
+            .doc-item .doc-file   { white-space: normal; overflow-wrap: anywhere; }
+            .doc-item .row-actions { grid-column: 1 / -1; grid-row: 3; width: 100% !important; flex-direction: row !important; flex-wrap: wrap; margin-top: 0 !important; }
+            .doc-item .row-actions .action-btn { flex: 1 1 0; width: auto !important; min-height: 38px !important; padding: 8px 10px !important; }
+        }
+        @media (max-width: 400px) {
+            .doc-item .row-actions .action-btn { padding: 8px 6px !important; font-size: 0.76rem !important; }
+            .doc-item .row-actions .action-btn i { display: none; }
+        }
     </style>
+    <?php if ($role === 'student'): ?>
+    <link rel="stylesheet" href="student_mobile.css?v=4">
+    <?php endif; ?>
     <link rel="stylesheet" href="registrar_mobile.css?v=2">
     <link rel="stylesheet" href="student_sidebar.css?v=1">
     <script src="search_helper.js?v=3"></script>
@@ -592,24 +788,22 @@ if ($role === 'registrar') {
     <link rel="stylesheet" href="doc_viewer.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
+    <?php if ($role === 'student'): ?>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
+    <?php endif; ?>
 </head>
 <body class="<?= $role === 'student' ? 'student-mode' : '' ?>">
-    <!-- Mobile Menu Button — students keep the floating button, registrars get the app bar -->
-    <?php if ($role === 'student'): ?>
-    <button class="mobile-toggle" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </button>
-    <?php else: ?>
+    <!-- The phone app bar, for students and registrars alike (as on submissions.php) -->
     <header class="mobile-appbar">
         <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Open menu">
             <i class="fas fa-bars"></i>
         </button>
-        <a href="registrar_dashboard.php" class="mobile-appbar-brand">
+        <a href="<?= $role === 'student' ? 'student_dashboard.php' : 'registrar_dashboard.php' ?>" class="mobile-appbar-brand">
             <img src="logo.jpg" alt="">
-            <span><?= ucfirst($role) ?></span>
+            <span><?= $role === 'student' ? 'Student Portal' : ucfirst($role) ?></span>
         </a>
     </header>
-    <?php endif; ?>
     <div class="sidebar-overlay" onclick="closeSidebar()"></div>
     <?php if ($role === 'student'): ?>
     <div class="sidebar">
@@ -728,7 +922,7 @@ if ($role === 'registrar') {
             <div id="submissions-section">
             <div class="table-card">
                 <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <h2>All Rejected</h2>
+                    <h2>All Rejected<?php if ($role === 'registrar' && count($submissions) > 0): ?> <span class="title-pending"><?= count($submissions) ?> file<?= count($submissions) === 1 ? '' : 's' ?> &middot; <?= count($student_groups) ?> student<?= count($student_groups) === 1 ? '' : 's' ?></span><?php endif; ?></h2>
                     <?php if ($role === 'registrar'): ?>
                     <div class="table-filters">
                         <!-- Download As One removed for reject page -->
@@ -795,14 +989,118 @@ if ($role === 'registrar') {
                         </select>
                         <select id="sectionFilter" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--main-bg); color: var(--text-primary); font-family: inherit;">
                             <option value="">All Sections</option>
-                            <option value="A">Section A</option>
-                            <option value="B">Section B</option>
-                            <option value="C">Section C</option>
-                            <option value="D">Section D</option>
+                            <?php foreach (range('A', 'Z') as $letter): ?>
+                                <option value="<?= $letter ?>">Section <?= $letter ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <?php endif; ?>
                 </div>
+                <?php if ($role === 'registrar'): ?>
+                <table id="submissionsTable" class="grouped">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Student</th>
+                            <th>Rejected</th>
+                            <th>Last Upload</th>
+                            <th class="cell-action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($student_groups)): ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                                    No rejected documents.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($student_groups as $uid => $group):
+                                $stu      = $group['student'];
+                                $gid      = 'rej' . $uid;
+                                $stu_name = formatPersonNameRow($stu);
+                                $stu_sid  = formatStudentId($stu['student_id'] ?? '');
+                                $stu_year = $stu['year_level'] ?? '';
+                                $stu_disp = !empty($stu_year) ? substr($stu_year, 0, 1) . ($stu['section'] ?? '') : '';
+                                $stu_line = trim(($stu['course'] ?? '') . ($stu_disp !== '' ? ' - ' . $stu_disp : ''), ' -');
+                                $stu_text = implode(' ', [$stu_sid, $stu['student_id'] ?? '', $stu_name, $stu_line]);
+                                $doc_total = count($group['docs']);
+                            ?>
+                                <tr class="stu-row" data-group="<?= $gid ?>"
+                                    data-course="<?= htmlspecialchars($stu['course'] ?? '') ?>" data-year="<?= htmlspecialchars($stu_year) ?>" data-section="<?= htmlspecialchars($stu['section'] ?? '') ?>">
+                                    <td data-label="Student ID" class="cell-student-id"><span class="sid"><?= htmlspecialchars($stu_sid) ?></span></td>
+                                    <td data-label="Student" class="cell-student-name">
+                                        <button type="button" class="stu-name" aria-expanded="false" aria-controls="<?= $gid ?>-docs" title="Show the rejected files of <?= htmlspecialchars($stu_name) ?>">
+                                            <span class="stu">
+                                                <span class="stu-fullname"><?= htmlspecialchars($stu_name) ?></span>
+                                                <?php if ($stu_line !== ''): ?><small><?= htmlspecialchars($stu_line) ?></small><?php endif; ?>
+                                            </span>
+                                            <i class="fas fa-chevron-down stu-chevron" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                    <td data-label="Rejected" class="cell-docs">
+                                        <span class="review-pill"><span class="review-count" data-total="<?= $doc_total ?>"><?= $doc_total ?></span> <span class="doc-count" data-total="<?= $doc_total ?>">rejected file<?= $doc_total === 1 ? '' : 's' ?></span></span>
+                                    </td>
+                                    <td data-label="Last Upload" class="cell-date"><?= $group['latest'] !== '' ? date('M d, Y', strtotime($group['latest'])) : 'N/A' ?></td>
+                                    <td data-label="" class="cell-action">
+                                        <button type="button" class="action-btn btn-files" aria-expanded="false" aria-controls="<?= $gid ?>-docs">
+                                            <i class="fas fa-folder-open"></i> <span class="btn-files-label">Open</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="stu-docs" id="<?= $gid ?>-docs" data-group="<?= $gid ?>" hidden>
+                                    <td colspan="5" data-label="">
+                                        <div class="doc-list" role="list" aria-label="Rejected files of <?= htmlspecialchars($stu_name) ?>">
+                                            <?php foreach ($group['docs'] as $sub):
+                                                $doc_type    = $sub['document_type'] ?: 'General';
+                                                $doc_label   = htmlspecialchars(json_encode($sub['document_type'] ?: $sub['document_name']), ENT_QUOTES);
+                                                $doc_date    = !empty($sub['submitted_at']) ? date('M d, Y', strtotime($sub['submitted_at'])) : 'N/A';
+                                                $ext         = strtolower(pathinfo($sub['file_path'] ?? '', PATHINFO_EXTENSION));
+                                                $doc_icon    = $ext === 'pdf' ? 'fa-file-pdf' : (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? 'fa-file-image' : 'fa-file');
+                                                $feedback_text = trim($sub['feedback'] ?? '');
+                                                $reviewer    = trim(($sub['reviewer_first'] ?? '') . ' ' . ($sub['reviewer_last'] ?? ''));
+                                                $review_meta = '';
+                                                if ($reviewer !== '' || !empty($sub['reviewed_at'])) {
+                                                    $review_meta = 'Reviewed'
+                                                        . ($reviewer !== '' ? ' by ' . $reviewer : '')
+                                                        . (!empty($sub['reviewed_at']) ? ' on ' . date('M d, Y \a\t g:i A', strtotime($sub['reviewed_at'])) : '');
+                                                }
+                                            ?>
+                                                <div class="doc-item" role="listitem"
+                                                     data-doctype="<?= htmlspecialchars($doc_type) ?>"
+                                                     data-search="<?= htmlspecialchars($stu_text . ' ' . $doc_type . ' ' . $sub['document_name'] . ' rejected ' . $doc_date) ?>">
+                                                    <span class="doc-icon"><i class="fas <?= $doc_icon ?>"></i></span>
+                                                    <div class="doc-main">
+                                                        <div class="doc-type"><?= htmlspecialchars($doc_type) ?></div>
+                                                        <div class="doc-file" title="<?= htmlspecialchars($sub['document_name']) ?>"><?= htmlspecialchars($sub['document_name']) ?></div>
+                                                    </div>
+                                                    <div class="doc-date"><i class="far fa-calendar"></i> <?= $doc_date ?></div>
+                                                    <div class="doc-status">
+                                                        <button type="button" class="status-badge rejected status-badge-btn"
+                                                                data-doc="<?= htmlspecialchars($sub['document_type'] ?: $sub['document_name']) ?>"
+                                                                data-student="<?= htmlspecialchars($stu_sid . ' — ' . $stu_name) ?>"
+                                                                data-note="<?= htmlspecialchars($feedback_text !== '' ? $feedback_text : 'No reason was recorded for this rejection.') ?>"
+                                                                data-meta="<?= htmlspecialchars($review_meta) ?>"
+                                                                onclick="openNoteModal(this)"
+                                                                title="See why this document was not approved">
+                                                            Rejected <i class="fas fa-circle-info"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div class="row-actions">
+                                                        <button type="button" class="action-btn btn-view" data-file="<?= htmlspecialchars($sub['file_path']) ?>" data-title="<?= htmlspecialchars($sub['document_name']) ?>" onclick="openPreview(this.dataset.file, this.dataset.title)" title="View document"><i class="fas fa-eye"></i> View</button>
+                                                        <button type="button" class="action-btn btn-approve" onclick="handleStatus(<?= (int)$sub['id'] ?>, 'approved', <?= $doc_label ?>)" title="Accept this document after all"><i class="fas fa-check"></i> Accept</button>
+                                                        <button type="button" class="action-btn btn-reject" onclick="handleStatus(<?= (int)$sub['id'] ?>, 'rejected', <?= $doc_label ?>)" title="Rewrite the note sent to the student"><i class="fas fa-pen"></i> Edit note</button>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+                <?php else: ?>
                 <table id="submissionsTable">
                     <thead>
                         <tr>
@@ -900,6 +1198,7 @@ if ($role === 'registrar') {
                         <?php endif; ?>
                     </tbody>
                 </table>
+                <?php endif; ?>
             </div>
             </div>
         </div>
@@ -1011,6 +1310,85 @@ if ($role === 'registrar') {
             setTimeout(() => document.body.removeChild(form), 100);
         }
 
+        // ── Registrar view: one row per student, their rejected files open underneath ──
+        // A group is opened by clicking the student (or its Open button). What is
+        // open survives the reload after Accept / Edit note through sessionStorage.
+        const RejGroups = (() => {
+            const table = document.getElementById('submissionsTable');
+            if (!table || !table.classList.contains('grouped')) return null;
+
+            const STORE = 'registrar-open-rejected';
+            let open = new Set();
+            try { open = new Set(JSON.parse(sessionStorage.getItem(STORE) || '[]')); } catch (e) {}
+            const save = () => { try { sessionStorage.setItem(STORE, JSON.stringify([...open])); } catch (e) {} };
+
+            const groups = Array.from(table.querySelectorAll('tr.stu-row')).map(row => {
+                const detail = document.getElementById(row.dataset.group + '-docs');
+                return {
+                    id: row.dataset.group, row, detail,
+                    items: detail ? Array.from(detail.querySelectorAll('.doc-item')) : [],
+                    shown: true,
+                    narrowed: false // a search or document filter hides some of its files
+                };
+            });
+
+            function render(g) {
+                const isOpen = g.shown && (open.has(g.id) || g.narrowed);
+                g.row.hidden = !g.shown;
+                if (g.detail) g.detail.hidden = !isOpen;
+                g.row.classList.toggle('is-open', isOpen);
+                g.row.querySelectorAll('[aria-controls]').forEach(b => b.setAttribute('aria-expanded', String(isOpen)));
+                const label = g.row.querySelector('.btn-files-label');
+                if (label) label.textContent = isOpen ? 'Hide' : 'Open';
+            }
+
+            // The whole student row is the toggle.
+            groups.forEach(g => {
+                g.row.addEventListener('click', e => {
+                    if (e.target.closest('input, a, label')) return;
+                    const isOpen = open.has(g.id) || g.narrowed;
+                    if (isOpen) { open.delete(g.id); g.narrowed = false; } else { open.add(g.id); }
+                    save();
+                    render(g);
+                });
+            });
+
+            // Search matches a file when every word appears in the student's details
+            // or in that file; a student is listed when at least one file matches.
+            function filter(input, rowOk, docType, active) {
+                const words = SearchKit.tokens(input ? input.value : '');
+                let shown = 0;
+                groups.forEach(g => {
+                    const studentOk = rowOk(g.row);
+                    let visible = 0;
+                    g.items.forEach(it => {
+                        const ok = studentOk
+                            && (!docType || (it.dataset.doctype || '').toLowerCase() === docType)
+                            && SearchKit.matches(it, words);
+                        it.hidden = !ok;
+                        if (ok) visible++;
+                    });
+                    g.shown = visible > 0;
+                    g.narrowed = g.shown && visible < g.items.length;
+                    const count = g.row.querySelector('.doc-count');
+                    const badge = g.row.querySelector('.review-count');
+                    if (count) {
+                        const total = +count.dataset.total;
+                        if (badge) badge.textContent = g.narrowed ? visible : total;
+                        count.textContent = g.narrowed
+                            ? 'of ' + total + ' rejected files'
+                            : 'rejected file' + (total === 1 ? '' : 's');
+                    }
+                    if (g.shown) shown++;
+                    render(g);
+                });
+                SearchKit.report(input, [{ table, shown, total: groups.length }], active);
+            }
+
+            groups.forEach(render);
+            return { filter };
+        })();
+
         // Filtering and Search functionality
         // The search box goes through search_helper.js (every word, any order,
         // no buttons); the dropdowns are exact matches on the row's data-*.
@@ -1020,6 +1398,18 @@ if ($role === 'registrar') {
             let yearFilter = document.getElementById('yearFilter') ? document.getElementById('yearFilter').value.toLowerCase() : '';
             let sectionFilter = document.getElementById('sectionFilter') ? document.getElementById('sectionFilter').value.toLowerCase() : '';
             
+            if (RejGroups) {
+                RejGroups.filter(document.getElementById('searchInput'), row => {
+                    let rowCourse = (row.getAttribute('data-course') || '').toLowerCase();
+                    let rowYear = (row.getAttribute('data-year') || '').toLowerCase();
+                    let rowSection = (row.getAttribute('data-section') || '').toLowerCase();
+                    return (courseFilter === '' || rowCourse === courseFilter)
+                        && (yearFilter === '' || rowYear === yearFilter)
+                        && (sectionFilter === '' || rowSection === sectionFilter);
+                }, docTypeFilter, !!(docTypeFilter || courseFilter || yearFilter || sectionFilter));
+                return;
+            }
+
             SearchKit.filterTables(document.getElementById('searchInput'), [document.getElementById('submissionsTable')], row => {
                 let rowDocType = (row.getAttribute('data-doctype') || '').toLowerCase();
                 let rowCourse = (row.getAttribute('data-course') || '').toLowerCase();

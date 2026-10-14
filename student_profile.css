@@ -1,0 +1,552 @@
+/*
+ * The student profile: the read-only modal that student_profile.js opens
+ * (.sp-*), and the Edit Profile form in student_settings.php (.pf-*).
+ *
+ * The accent follows --primary-color, the colour a student picks in Settings,
+ * so the modal matches whatever theme the page is in.
+ */
+
+/* ── Sidebar picture as a button ───────────────────────────────────────────── */
+.sp-trigger {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.sp-trigger:hover,
+.sp-trigger:focus-visible {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+    outline: none;
+}
+
+/* The count of required answers still missing, on the corner of the picture -
+   the same red pill as the Notifications badge in the menu. */
+.sp-avatar-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;              /* no stray gap under the picture */
+}
+.sp-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 2px solid var(--sidebar-bg, #ffffff);
+    background: #ef4444;
+    color: #ffffff;
+    font: 700 11.5px/18px 'Inter', system-ui, sans-serif;
+    text-align: center;
+    cursor: pointer;
+    animation: sp-badge-in 0.2s ease-out;
+}
+.sp-badge[hidden] { display: none; }
+@keyframes sp-badge-in {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+/* On a phone the picture is inside the closed drawer, so the menu button
+   carries a red dot too. */
+/* relative only to anchor the dot: the pages give the button top/left for its
+   old floating position, which must not move it inside the app bar. */
+html.sp-missing .mobile-appbar .mobile-toggle { position: relative; top: 0; left: 0; }
+html.sp-missing .mobile-toggle::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    background: #ef4444;
+}
+
+/* A student's name in a registrar table: opens that student's profile. */
+.sp-link {
+    cursor: pointer;
+    border-bottom: 1px dashed currentColor;
+    transition: color 0.15s ease;
+}
+.sp-link:hover,
+.sp-link:focus-visible {
+    color: var(--accent-gold, var(--primary-color, #1a365d));
+    border-bottom-style: solid;
+    outline: none;
+}
+
+/* ── Modal shell ───────────────────────────────────────────────────────────── */
+html.sp-open { overflow: hidden; }
+
+.sp {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;               /* above the sidebar and doc viewer, below ui_dialog */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+.sp[hidden] { display: none; }
+.sp *, .sp *::before, .sp *::after { box-sizing: border-box; }
+
+.sp-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+.sp-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    max-height: 100%;
+    background: #ffffff;
+    color: #1e293b;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+    overflow: hidden;
+    outline: none;
+    animation: sp-in 0.16s ease-out;
+}
+@keyframes sp-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+.sp-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px 14px 22px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+.sp-bar h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.sp-bar h2 i { color: var(--primary-color, #1a365d); margin-right: 6px; }
+.sp-close {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+.sp-close:hover { background: #e2e8f0; color: #0f172a; }
+.sp-body {
+    padding: 22px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* ── Profile content ───────────────────────────────────────────────────────── */
+.sp-head {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px;
+    margin-bottom: 20px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.sp-photo {
+    width: 92px;
+    height: 92px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color, #1a365d);
+    background: #e2e8f0;
+}
+.sp-photo.is-initial {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color, #1a365d);
+    color: #ffffff;
+    font-size: 36px;
+    font-weight: 700;
+}
+.sp-head-text { min-width: 0; }
+.sp-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+.sp-id { margin-top: 3px; font-size: 13px; color: #64748b; }
+.sp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sp-chips span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.sp-sec { margin-bottom: 22px; }
+.sp-sec h3 {
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #475569;
+}
+.sp-sec h3 i { color: var(--primary-color, #1a365d); margin-right: 6px; }
+
+.sp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 18px;
+    margin: 0;
+}
+.sp-item.is-wide { grid-column: 1 / -1; }
+.sp-item dt {
+    margin-bottom: 2px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #64748b;
+}
+.sp-item dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}
+.sp-item dd.is-blank { color: #94a3b8; font-weight: 400; }
+
+/* Schools, earliest first, as a timeline. */
+.sp-edu {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 6px;
+}
+.sp-edu li {
+    position: relative;
+    padding: 0 0 16px 22px;
+    border-left: 2px solid #e2e8f0;
+}
+.sp-edu li:last-child { padding-bottom: 0; border-left-color: transparent; }
+.sp-edu li::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-color, #1a365d);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 1px #cbd5e1;
+}
+.sp-edu li.is-blank::before { background: #cbd5e1; }
+.sp-edu-level {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+.sp-edu-school {
+    margin-top: 2px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}
+.sp-edu li.is-blank .sp-edu-school { color: #94a3b8; font-weight: 400; }
+.sp-edu-meta { margin-top: 3px; font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+.sp-edu-meta i { width: 16px; color: #94a3b8; font-size: 12px; }
+
+.sp-foot {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    font-size: 13px;
+    color: #475569;
+}
+.sp-foot.is-missing { background: #fef2f2; color: #991b1b; }
+.sp-foot:not(.is-missing) { background: #f0fdf4; color: #166534; }
+.sp-foot i { margin-top: 2px; }
+.sp-foot a { color: inherit; font-weight: 700; }
+
+.sp-empty { margin: 30px 0; text-align: center; color: #64748b; font-size: 14px; }
+.sp-retry {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--primary-color, #1a365d);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Placeholder shown for the moment before the profile arrives. */
+.sp-skel { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+.sp-skel-photo { width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0; }
+.sp-skel-lines { flex: 1; }
+.sp-skel-lines i { display: block; height: 16px; border-radius: 6px; margin-bottom: 10px; }
+.sp-skel-lines i:last-child { width: 55%; }
+.sp-skel-block { height: 96px; border-radius: 12px; margin-bottom: 16px; }
+.sp-skel-photo, .sp-skel-lines i, .sp-skel-block {
+    background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 50%, #eef2f7 75%);
+    background-size: 200% 100%;
+    animation: sp-shimmer 1.1s linear infinite;
+}
+@keyframes sp-shimmer { to { background-position: -200% 0; } }
+
+@media (max-width: 720px) {
+    .sp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* On a phone the modal is the whole screen, so nothing is cramped. */
+@media (max-width: 560px) {
+    .sp { padding: 0; align-items: stretch; }
+    .sp-panel { max-width: none; border-radius: 0; height: 100%; }
+    .sp-bar { padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 12px 16px; }
+    .sp-body { padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
+    .sp-head { flex-direction: column; text-align: center; gap: 12px; }
+    .sp-chips { justify-content: center; }
+    .sp-name { font-size: 18px; }
+}
+@media (max-width: 380px) {
+    .sp-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-panel, .sp-trigger, .sp-skel-photo, .sp-skel-lines i, .sp-skel-block { animation: none; transition: none; }
+}
+
+/* ── On the registrar's pages (written dark) ────────────────────────────────────
+   theme_mode.js marks those pages data-theme-base="dark"; the modal takes
+   their palette there, and light mode then comes from the page inversion. */
+html[data-theme-base="dark"]:not([data-theme-invert]) .sp-backdrop { background: rgba(2, 6, 23, 0.7); }
+html[data-theme-base="dark"][data-theme-invert] .sp-panel { box-shadow: none; }
+html[data-theme-base="dark"] .sp-panel {
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+html[data-theme-base="dark"] .sp-bar { border-bottom-color: #334155; }
+html[data-theme-base="dark"] .sp-bar h2,
+html[data-theme-base="dark"] .sp-name,
+html[data-theme-base="dark"] .sp-item dd,
+html[data-theme-base="dark"] .sp-edu-school { color: #f1f5f9; }
+html[data-theme-base="dark"] .sp-bar h2 i,
+html[data-theme-base="dark"] .sp-sec h3 i,
+html[data-theme-base="dark"] .sp-retry { color: var(--accent-gold, #c9a227); }
+html[data-theme-base="dark"] .sp-close { background: #0f172a; color: #cbd5e1; }
+html[data-theme-base="dark"] .sp-close:hover { background: #334155; color: #ffffff; }
+html[data-theme-base="dark"] .sp-head { background: #0f172a; border-color: #334155; }
+html[data-theme-base="dark"] .sp-photo { border-color: var(--accent-gold, #c9a227); background: #334155; }
+html[data-theme-base="dark"] .sp-photo.is-initial { background: var(--accent-gold, #c9a227); color: #0f172a; }
+html[data-theme-base="dark"] .sp-id,
+html[data-theme-base="dark"] .sp-item dt,
+html[data-theme-base="dark"] .sp-edu-level,
+html[data-theme-base="dark"] .sp-empty { color: #94a3b8; }
+html[data-theme-base="dark"] .sp-chips span { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+html[data-theme-base="dark"] .sp-sec h3 { color: #cbd5e1; border-bottom-color: #334155; }
+html[data-theme-base="dark"] .sp-item dd.is-blank,
+html[data-theme-base="dark"] .sp-edu li.is-blank .sp-edu-school { color: #64748b; }
+html[data-theme-base="dark"] .sp-edu li { border-left-color: #334155; }
+html[data-theme-base="dark"] .sp-edu li:last-child { border-left-color: transparent; }
+html[data-theme-base="dark"] .sp-edu li::before {
+    background: var(--accent-gold, #c9a227);
+    border-color: #1e293b;
+    box-shadow: 0 0 0 1px #475569;
+}
+html[data-theme-base="dark"] .sp-edu li.is-blank::before { background: #475569; }
+html[data-theme-base="dark"] .sp-edu-meta { color: #cbd5e1; }
+html[data-theme-base="dark"] .sp-edu-meta i { color: #64748b; }
+html[data-theme-base="dark"] .sp-foot { background: #0f2a1d; color: #86efac; }
+html[data-theme-base="dark"] .sp-foot.is-missing { background: #3b1218; color: #fca5a5; }
+html[data-theme-base="dark"] .sp-skel-photo,
+html[data-theme-base="dark"] .sp-skel-lines i,
+html[data-theme-base="dark"] .sp-skel-block {
+    background: linear-gradient(90deg, #273449 25%, #334155 50%, #273449 75%);
+    background-size: 200% 100%;
+}
+
+/* ── Edit Profile form (student_settings.php) ──────────────────────────────── */
+.pf-section {
+    margin: 26px 0 16px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+.pf-section h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.pf-section h4 i { color: var(--primary-color, #1a365d); margin-right: 6px; }
+.pf-section p { margin: 4px 0 0; font-size: 13px; color: #64748b; }
+
+.pf-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 20px;
+    margin-bottom: 20px;
+}
+.pf-grid .is-wide { grid-column: 1 / -1; }
+.pf-hint { display: block; margin-top: 5px; font-size: 12px; color: #64748b; min-height: 15px; }
+.pf-readonly { background: #f1f5f9; color: #64748b; cursor: not-allowed; }
+
+.pf-edu {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.pf-edu-title { margin-bottom: 10px; font-size: 13.5px; font-weight: 700; color: #334155; }
+.pf-edu-title small { font-weight: 500; color: #94a3b8; }
+.pf-edu-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) 96px 96px;
+    gap: 12px 14px;
+}
+.pf-edu-grid .is-wide { grid-column: 1 / -1; }
+.pf-edu .form-label { font-size: 12.5px; margin-bottom: 5px; }
+.pf-edu .form-input { background: #ffffff; }
+
+/* A picked address: region, province, city / municipality, barangay, then street and ZIP. */
+.pf-place {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 14px;
+    margin-top: 6px;
+}
+.pf-place .pf-place-street { grid-column: span 3; }
+.pf-place-label { font-size: 12px; color: #64748b; margin-bottom: 5px; }
+.pf-place-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pf-place-head .form-label { margin-bottom: 0; }
+.pf-copy-place {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 8px; border: 1px solid #cbd5e1;
+    background: #ffffff; color: #334155; font: 600 12px 'Inter', sans-serif; cursor: pointer;
+}
+.pf-copy-place:hover { background: #f1f5f9; border-color: #94a3b8; }
+.pf-copy-place.is-done { border-color: #86efac; background: #f0fdf4; color: #166534; }
+.pf-place .form-select:disabled { opacity: 0.6; cursor: not-allowed; }
+.pf-legacy { color: #b45309; }
+.pf-legacy i { margin-right: 4px; }
+.pf-edu .pf-place { margin-top: 0; }
+/* A school's address takes a whole row of its card, under the name. */
+.pf-edu-grid .pf-edu-place { grid-column: 1 / -1; }
+/* The school's name, picked from the list (or typed), beside the two years. */
+.pf-edu-grid .pf-edu-school { grid-column: span 2; display: flex; flex-direction: column; gap: 8px; }
+.pf-edu-school .form-label { margin-bottom: 0; }
+.pf-edu-school .form-select:disabled { opacity: 0.65; cursor: not-allowed; }
+.pf-edu-school [hidden] { display: none; }
+.pf-edu-grid .pf-edu-place .pf-place { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.pf-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.pf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font: 600 14px 'Inter', sans-serif;
+    cursor: pointer;
+}
+.pf-btn.is-primary { background: var(--primary-color, #1a365d); color: #ffffff; }
+.pf-btn.is-ghost { background: #ffffff; color: #334155; border-color: #cbd5e1; }
+.pf-btn.is-ghost:hover { background: #f1f5f9; }
+
+.pf-req { color: #dc2626; font-weight: 700; }
+.pf-missing {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+.pf-missing i { margin-top: 3px; font-size: 16px; color: #dc2626; }
+.pf-missing.is-complete { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+.pf-missing.is-complete i { color: #16a34a; }
+
+.pf-flash {
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    background: #dcfce7;
+    color: #15803d;
+}
+.pf-flash.is-error { background: #fee2e2; color: #b91c1c; }
+.pf-flash ul { margin: 6px 0 0; padding-left: 20px; font-weight: 400; }
+
+@media (max-width: 900px) {
+    .pf-place, .pf-edu-grid .pf-edu-place .pf-place { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pf-place .pf-place-street { grid-column: 1 / -1; }
+    .pf-edu-grid .pf-edu-school { grid-column: 1 / -1; }
+    .pf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pf-edu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pf-edu-grid .pf-edu-wide { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+    .pf-place, .pf-edu-grid .pf-edu-place .pf-place { grid-template-columns: 1fr; }
+    .pf-place .form-select, .pf-place .form-input { font-size: 16px; }
+    .pf-grid { grid-template-columns: 1fr; gap: 14px; }
+    .pf-actions .pf-btn { flex: 1 1 100%; }
+    /* 16px stops iOS zooming the page when a field is focused. */
+    .pf-grid .form-input, .pf-grid .form-select, .pf-edu .form-input { font-size: 16px; }
+}
+
+/* ── "Your profile is complete" (student_settings.php) ───────────────────────────
+   Shown once, after the save that filled in the last required detail. */
+.pf-done { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.pf-done[hidden] { display: none; }
+.pf-done-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.55); }
+.pf-done-card {
+    position: relative; width: 100%; max-width: 420px; padding: 30px 26px 24px; text-align: center;
+    border-radius: 18px; background: #ffffff; color: #1e293b; outline: none;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3); animation: pf-done-in 0.22s ease-out;
+}
+@keyframes pf-done-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
+.pf-done-icon {
+    width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #dcfce7; color: #16a34a; font-size: 32px;
+}
+.pf-done-card h3 { margin: 0 0 8px; font-size: 19px; font-weight: 700; color: #0f172a; }
+.pf-done-card p { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: #475569; }
+.pf-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.pf-done-actions .pf-btn { flex: 1 1 140px; }
+@media (prefers-reduced-motion: reduce) { .pf-done-card { animation: none; } }

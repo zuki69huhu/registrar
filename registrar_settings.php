@@ -98,6 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Settings - Registrar Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -877,87 +879,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         <div class="content">
             <div class="settings-grid">
 
-                <!-- PERSONALIZATION CARD (Full Width) -->
+                <!-- APPEARANCE CARD (Full Width) -->
                 <div class="card full-width">
                     <div class="card-header">
-                        <div class="card-header-icon gold"><i class="fas fa-palette"></i></div>
+                        <div class="card-header-icon gold"><i class="fas fa-circle-half-stroke"></i></div>
                         <div class="card-header-text">
-                            <h3>Theme Personalization</h3>
-                            <p>Customize the look and feel of your dashboard — changes apply instantly</p>
+                            <h3>Appearance</h3>
+                            <p>Choose light mode or dark mode</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <!-- Accent Color -->
-                        <div class="color-setting">
-                            <div class="color-setting-label">
-                                <i class="fas fa-droplet"></i> Accent Theme Color
-                            </div>
-                            <div class="color-picker-row">
-                                <input type="color" id="custom-theme-color" class="custom-color-picker"
-                                    oninput="setRegistrarTheme(this.value); syncHex('theme-hex', this.value); updateSwatches('theme'); updatePreview()"
-                                    onchange="setRegistrarTheme(this.value); showToast('Accent color updated!')"
-                                    title="Pick accent color">
-                                <input type="text" id="theme-hex" class="color-hex-input" maxlength="7" placeholder="#c9a227"
-                                    oninput="applyHex(this, 'custom-theme-color', setRegistrarTheme); updateSwatches('theme'); updatePreview()">
-                                <div class="preset-swatches" id="theme-swatches"></div>
-                            </div>
+                        <div class="theme-choices">
+                            <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">
+                                <span class="theme-choice-icon"><i class="fas fa-sun"></i></span>
+                                <span><strong>Light mode</strong><small>Bright background, dark text</small></span>
+                                <i class="fas fa-circle-check theme-choice-check"></i>
+                            </button>
+                            <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">
+                                <span class="theme-choice-icon"><i class="fas fa-moon"></i></span>
+                                <span><strong>Dark mode</strong><small>Dark background, light text</small></span>
+                                <i class="fas fa-circle-check theme-choice-check"></i>
+                            </button>
                         </div>
-
-                        <!-- Background Color -->
-                        <div class="color-setting">
-                            <div class="color-setting-label">
-                                <i class="fas fa-fill-drip"></i> Background Color
-                            </div>
-                            <div class="color-picker-row">
-                                <input type="color" id="custom-bg-color" class="custom-color-picker"
-                                    oninput="setRegistrarBg(this.value); syncHex('bg-hex', this.value); updateSwatches('bg'); updatePreview()"
-                                    onchange="setRegistrarBg(this.value); showToast('Background color updated!')"
-                                    title="Pick background color">
-                                <input type="text" id="bg-hex" class="color-hex-input" maxlength="7" placeholder="#0f172a"
-                                    oninput="applyHex(this, 'custom-bg-color', setRegistrarBg); updateSwatches('bg'); updatePreview()">
-                                <div class="preset-swatches" id="bg-swatches"></div>
-                            </div>
-                        </div>
-
-                        <!-- Sidebar Color -->
-                        <div class="color-setting">
-                            <div class="color-setting-label">
-                                <i class="fas fa-columns"></i> Sidebar Color
-                            </div>
-                            <div class="color-picker-row">
-                                <input type="color" id="custom-sidebar-color" class="custom-color-picker"
-                                    oninput="setRegistrarSidebarBg(this.value); syncHex('sidebar-hex', this.value); updateSwatches('sidebar'); updatePreview()"
-                                    onchange="setRegistrarSidebarBg(this.value); showToast('Sidebar color updated!')"
-                                    title="Pick sidebar color">
-                                <input type="text" id="sidebar-hex" class="color-hex-input" maxlength="7" placeholder="#0f172a"
-                                    oninput="applyHex(this, 'custom-sidebar-color', setRegistrarSidebarBg); updateSwatches('sidebar'); updatePreview()">
-                                <div class="preset-swatches" id="sidebar-swatches"></div>
-                            </div>
-                        </div>
-
-                        <!-- Live Preview -->
-                        <div class="live-preview">
-                            <div class="live-preview-label"><i class="fas fa-eye" style="margin-right: 4px;"></i> Live Preview</div>
-                            <div class="preview-mini" id="live-preview-box">
-                                <div class="preview-sidebar-mini" id="preview-sidebar">
-                                    <div class="dot active" id="preview-accent-dot"></div>
-                                    <div class="dot"></div>
-                                    <div class="dot"></div>
-                                    <div class="dot"></div>
-                                </div>
-                                <div class="preview-main-mini" id="preview-main">
-                                    <div class="bar accent" id="preview-accent-bar"></div>
-                                    <div class="bar" style="width: 80%;"></div>
-                                    <div class="bar" style="width: 60%;"></div>
-                                    <div class="bar" style="width: 90%;"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Reset Button -->
-                        <button class="reset-btn" onclick="resetToDefaults()">
-                            <i class="fas fa-rotate-left"></i> Reset to Defaults
-                        </button>
+                        <p class="theme-note">Applies right away to every page of your portal on this device.</p>
                     </div>
                 </div>
 
@@ -1046,168 +990,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         </div>
     </div>
 
-    <!-- Toast notification -->
-    <div class="toast toast-info" id="toast"></div>
 
     <script>
-        // ─── PRESET COLORS ───
-        const presets = {
-            theme: ['#c9a227','#3b82f6','#10b981','#8b5cf6','#ef4444','#f59e0b','#ec4899','#06b6d4','#84cc16','#f97316'],
-            bg:    ['#0f172a','#1a1a2e','#0a0a0a','#1b1b2f','#16213e','#0d1117','#1e1e2e','#181825','#0c0c1d','#0b132b'],
-            sidebar: ['#0f172a','#0a0f1a','#111827','#1e1b4b','#1a1a2e','#0d1117','#171717','#0c0a09','#1c1917','#0b132b']
-        };
-
-        function buildSwatches(type) {
-            const container = document.getElementById(type + '-swatches');
-            if (!container) return;
-            container.innerHTML = '';
-            presets[type].forEach(color => {
-                const swatch = document.createElement('div');
-                swatch.className = 'swatch';
-                swatch.style.background = color;
-                swatch.title = color;
-                swatch.onclick = () => {
-                    document.getElementById(type === 'theme' ? 'custom-theme-color' : type === 'bg' ? 'custom-bg-color' : 'custom-sidebar-color').value = color;
-                    document.getElementById(type === 'theme' ? 'theme-hex' : type === 'bg' ? 'bg-hex' : 'sidebar-hex').value = color;
-                    if (type === 'theme') setRegistrarTheme(color);
-                    else if (type === 'bg') setRegistrarBg(color);
-                    else setRegistrarSidebarBg(color);
-                    updateSwatches(type);
-                    updatePreview();
-                    showToast('Color applied!');
-                };
-                container.appendChild(swatch);
-            });
-            updateSwatches(type);
-        }
-
-        function updateSwatches(type) {
-            const pickerId = type === 'theme' ? 'custom-theme-color' : type === 'bg' ? 'custom-bg-color' : 'custom-sidebar-color';
-            const currentColor = document.getElementById(pickerId).value.toLowerCase();
-            const container = document.getElementById(type + '-swatches');
-            if (!container) return;
-            container.querySelectorAll('.swatch').forEach(s => {
-                const swatchColor = rgbToHex(s.style.backgroundColor) || s.title;
-                s.classList.toggle('active', swatchColor.toLowerCase() === currentColor);
-            });
-        }
-
-        function rgbToHex(rgb) {
-            if (rgb.startsWith('#')) return rgb;
-            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-            if (!match) return '';
-            return '#' + [match[1], match[2], match[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
-        }
-
-        // ─── THEME FUNCTIONS ───
-        function setRegistrarTheme(color) {
-            document.documentElement.style.setProperty('--accent-gold', color);
-            localStorage.setItem('registrar-theme-color', color);
-        }
-
-        function setRegistrarBg(color) {
-            document.documentElement.style.setProperty('--main-bg', color);
-            localStorage.setItem('registrar-bg-color', color);
-        }
-
-        function setRegistrarSidebarBg(color) {
-            document.documentElement.style.setProperty('--sidebar-bg', color);
-            localStorage.setItem('registrar-sidebar-bg', color);
-        }
-
-        function syncHex(hexId, value) {
-            document.getElementById(hexId).value = value;
-        }
-
-        function applyHex(input, pickerId, fn) {
-            const val = input.value;
-            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-                document.getElementById(pickerId).value = val;
-                fn(val);
-            }
-        }
-
-        // ─── RESET ───
-        function resetToDefaults() {
-            const defaults = { theme: '#c9a227', bg: '#0f172a', sidebar: '#0f172a' };
-
-            setRegistrarTheme(defaults.theme);
-            setRegistrarBg(defaults.bg);
-            setRegistrarSidebarBg(defaults.sidebar);
-
-            document.getElementById('custom-theme-color').value = defaults.theme;
-            document.getElementById('theme-hex').value = defaults.theme;
-            document.getElementById('custom-bg-color').value = defaults.bg;
-            document.getElementById('bg-hex').value = defaults.bg;
-            document.getElementById('custom-sidebar-color').value = defaults.sidebar;
-            document.getElementById('sidebar-hex').value = defaults.sidebar;
-
-            updateSwatches('theme');
-            updateSwatches('bg');
-            updateSwatches('sidebar');
-            updatePreview();
-            showToast('Reset to default colors!', 'success');
-        }
-
-        // ─── LIVE PREVIEW ───
-        function updatePreview() {
-            const accent = document.getElementById('custom-theme-color').value;
-            const bg = document.getElementById('custom-bg-color').value;
-            const sidebar = document.getElementById('custom-sidebar-color').value;
-
-            document.getElementById('preview-sidebar').style.background = sidebar;
-            document.getElementById('preview-main').style.background = bg;
-            document.getElementById('preview-accent-dot').style.background = accent;
-            document.getElementById('preview-accent-bar').style.background = accent;
-
-            // dots and bars inherit colors
-            document.querySelectorAll('#preview-sidebar .dot:not(.active)').forEach(d => d.style.background = 'rgba(255,255,255,0.2)');
-            document.querySelectorAll('#preview-main .bar:not(.accent)').forEach(b => b.style.background = 'rgba(255,255,255,0.08)');
-        }
-
-        // ─── TOAST ───
-        function showToast(msg, type = 'info') {
-            const toast = document.getElementById('toast');
-            toast.className = 'toast toast-' + type;
-            toast.innerHTML = '<i class="fas fa-' + (type === 'success' ? 'check-circle' : 'paint-brush') + '"></i> ' + msg;
-            toast.classList.add('show');
-            clearTimeout(window._toastTimer);
-            window._toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
-        }
-
-        // ─── INIT ───
-        document.addEventListener('DOMContentLoaded', () => {
-            // Load saved colors
-            const savedTheme = localStorage.getItem('registrar-theme-color') || '#c9a227';
-            document.documentElement.style.setProperty('--accent-gold', savedTheme);
-            if (/^#[0-9A-F]{6}$/i.test(savedTheme)) {
-                document.getElementById('custom-theme-color').value = savedTheme;
-                document.getElementById('theme-hex').value = savedTheme;
-            }
-
-            const savedBg = localStorage.getItem('registrar-bg-color') || '#0f172a';
-            document.documentElement.style.setProperty('--main-bg', savedBg);
-            if (/^#[0-9A-F]{6}$/i.test(savedBg)) {
-                document.getElementById('custom-bg-color').value = savedBg;
-                document.getElementById('bg-hex').value = savedBg;
-            }
-
-            const savedSidebarBg = localStorage.getItem('registrar-sidebar-bg') || '#0f172a';
-            document.documentElement.style.setProperty('--sidebar-bg', savedSidebarBg);
-            if (/^#[0-9A-F]{6}$/i.test(savedSidebarBg)) {
-                document.getElementById('custom-sidebar-color').value = savedSidebarBg;
-                document.getElementById('sidebar-hex').value = savedSidebarBg;
-            }
-
-            // Build swatch presets
-            buildSwatches('theme');
-            buildSwatches('bg');
-            buildSwatches('sidebar');
-
-            // Init live preview
-            updatePreview();
-        });
-
         // ─── SIDEBAR TOGGLE ───
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('active');

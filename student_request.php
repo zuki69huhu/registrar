@@ -14,6 +14,9 @@
 session_start();
 require_once 'db.php';
 require_once 'request_config.php';
+require_once 'profile_config.php';
+
+ensureProfileColumn($mysqli);
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     header("Location: index.php?tab=login");
@@ -27,7 +30,7 @@ if (!$user_id) {
 }
 
 $stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, student_id, email, profile_picture,
-                                 year_level, course, section, institution, contact_number, address
+                                 year_level, course, section, institution, contact_number, address, profile_data
                           FROM users WHERE id = ?");
 if (!$stmt) {
     $_SESSION['flash'] = "System error. Please try again later.";
@@ -104,6 +107,10 @@ $fileable = array_diff_key($available_forms, $open_by_form);
 // Not a users column, but the Form 137 letter asks for the name in one piece.
 $user_data['full_name'] = $full_name;
 
+// The Student Profile (Settings > Edit Profile): birth date, sex, civil status
+// and the schools attended fill the matching fields of every form.
+$student_profile = decodeStudentProfile($user_data['profile_data'] ?? '');
+
 /** Prefer what the portal knows about the student, then what they typed last time. */
 function prefillValue($field, $user_data, $last_form_data) {
     if (!empty($field['autofill']) && !empty($user_data[$field['autofill']])) {
@@ -142,6 +149,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Requests - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -434,13 +443,15 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
             .claim-slip { border: 2px solid #0f172a; background: white !important; }
         }
     </style>
-    <link rel="stylesheet" href="request_form.css?v=4">
+    <link rel="stylesheet" href="request_form.css?v=6">
     <link rel="stylesheet" href="request_viewer.css?v=2">
     <link rel="stylesheet" href="student_mobile.css?v=1">
     <link rel="stylesheet" href="student_sidebar.css?v=1">
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
 </head>
 <body class="student-shell">
     <header class="mobile-appbar">
@@ -689,22 +700,6 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
             <div class="card form-picker" id="formPicker">
                 <div class="card-title"><i class="fas fa-folder-open"></i> Forms you can file</div>
                 <div class="card-sub">Pick one to fill up. Whatever the portal already knows about you is filled in for you.</div>
-                <?php if (count($fileable) > 1): ?>
-                <div class="form-filter" role="group" aria-label="Filter the forms">
-                    <span class="filter-caption"><i class="fas fa-filter"></i> Show</span>
-                    <div class="fchips">
-                        <button type="button" class="fchip is-active" data-filter="all">
-                            All forms <span class="fcount"><?= count($fileable) ?></span>
-                        </button>
-                        <?php foreach ($fileable as $ft => $f): ?>
-                            <button type="button" class="fchip" data-filter="<?= htmlspecialchars($ft) ?>">
-                                <i class="fas <?= htmlspecialchars($f['icon']) ?>"></i>
-                                <?= htmlspecialchars($f['short'] ?? $f['title']) ?>
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
 
                 <div class="picker-grid">
                     <?php foreach ($fileable as $ft => $f): ?>
@@ -723,6 +718,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 
             <?php foreach ($fileable as $ft => $f):
                 $last_form_data = $last_by_form[$ft] ?? [];
+                $fill_data = requestAutofillData($user_data, $student_profile, $ft);
             ?>
             <div class="card form-card" id="form-<?= htmlspecialchars($ft) ?>" hidden>
                 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:6px;">
@@ -752,8 +748,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
                                 <?php foreach ($section['fields'] as $field):
                                     $fid   = 'f_' . $ft . '_' . $field['name'];
                                     $type  = $field['type'] ?? 'text';
-                                    $value = prefillValue($field, $user_data, $last_form_data);
-                                    $auto  = !empty($field['autofill']) && !empty($user_data[$field['autofill']]);
+                                    $value = prefillValue($field, $fill_data, $last_form_data);
+                                    $auto  = !empty($field['autofill']) && !empty($fill_data[$field['autofill']]);
                                     $required = !empty($field['required']);
                                     $attrs = ($required ? ' required' : '') . (!empty($field['readonly']) ? ' readonly' : '');
                                 ?>

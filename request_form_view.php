@@ -106,7 +106,7 @@ $title = $form['title'] . ' ' . $ref;
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link rel="stylesheet" href="request_form.css?v=4">
+    <link rel="stylesheet" href="request_form.css?v=6">
     <style>
         body { margin: 0; background: #e2e8f0; font-family: Arial, Helvetica, sans-serif; }
         .sheet-wrap { display: flex; justify-content: center; padding: 24px 16px 48px; }

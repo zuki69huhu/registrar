@@ -53,6 +53,10 @@
         font-weight: 700;
         text-decoration: none;
     }
+    /* submissions.php and reject.php also link registrar_mobile.css, whose light
+       title colour would otherwise win on the student's white bar. */
+    body.student-mode .mobile-appbar-brand { color: #0f172a; }
+    body.student-mode .mobile-appbar .mobile-toggle { color: #ffffff; }
     .mobile-appbar-brand img { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
     .mobile-appbar-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

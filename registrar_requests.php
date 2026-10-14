@@ -235,6 +235,8 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Document Requests - Registrar Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -400,7 +402,7 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
             .row-actions { justify-content: flex-end; }
         }
     </style>
-    <link rel="stylesheet" href="request_form.css?v=4">
+    <link rel="stylesheet" href="request_form.css?v=6">
     <link rel="stylesheet" href="request_viewer.css?v=2">
     <link rel="stylesheet" href="registrar_mobile.css?v=2">
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
