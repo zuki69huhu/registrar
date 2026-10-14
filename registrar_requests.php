@@ -11,9 +11,9 @@
  */
 
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/request_config.php';
-require_once 'includes/name_helper.php';
+require_once 'db.php';
+require_once 'request_config.php';
+require_once 'name_helper.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'registrar') {
     header("Location: index.php?tab=login");
@@ -235,8 +235,8 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="assets/js/theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
-    <link rel="stylesheet" href="assets/css/theme_mode.css?v=9">
+    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Document Requests - Registrar Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -402,12 +402,12 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
             .row-actions { justify-content: flex-end; }
         }
     </style>
-    <link rel="stylesheet" href="assets/css/request_form.css?v=6">
-    <link rel="stylesheet" href="assets/css/request_viewer.css?v=2">
-    <link rel="stylesheet" href="assets/css/registrar_mobile.css?v=2">
-    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
-    <script src="assets/js/ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="request_form.css?v=6">
+    <link rel="stylesheet" href="request_viewer.css?v=2">
+    <link rel="stylesheet" href="registrar_mobile.css?v=2">
+    <link rel="stylesheet" href="mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="ui_dialog.css?v=1">
+    <script src="ui_dialog.js?v=1" defer></script>
 </head>
 <body>
     <header class="mobile-appbar">
@@ -415,7 +415,7 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
             <i class="fas fa-bars"></i>
         </button>
         <a href="registrar_dashboard.php" class="mobile-appbar-brand">
-            <img src="assets/img/logo.jpg" alt="">
+            <img src="logo.jpg" alt="">
             <span>Registrar</span>
         </a>
     </header>
@@ -423,7 +423,7 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
 
     <div class="sidebar">
         <div class="sidebar-logo">
-            <div class="logo-box"><img src="assets/img/logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;"></div>
+            <div class="logo-box"><img src="logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;"></div>
             <span class="sidebar-brand">Registrar</span>
         </div>
         <nav class="sidebar-nav">
@@ -764,8 +764,8 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
         </div>
     </div>
 
-<script src="assets/js/request_form.js?v=1"></script>
-<script src="assets/js/request_viewer.js?v=3"></script>
+<script src="request_form.js?v=1"></script>
+<script src="request_viewer.js?v=3"></script>
 <script>
 const REQUESTS = <?= json_encode($modal_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
 
@@ -781,7 +781,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') document.querySelectorAll('.modal.open').forEach(m => closeModal(m.id));
 });
 
-/* The filled form opens in the shared viewer (assets/js/request_viewer.js), the same one
+/* The filled form opens in the shared viewer (request_viewer.js), the same one
    the student's Requests page uses, so the sheet and its zoom, print and
    download controls behave identically on both. The decisions that belong to
    the registrar are passed in as footer actions. */

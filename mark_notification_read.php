@@ -3,7 +3,7 @@ ob_start();
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/db.php';
 
 // Check if user is logged in
 $user_id = $_SESSION['user_id'] ?? null;
@@ -16,9 +16,9 @@ if (!$user_id) {
     }
     if (ob_get_length()) ob_end_clean();
     header("Location: index.php?tab=login");
-    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=index.php?tab=login"><script>window.location.href="index.php?tab=login";</script><title>Redirecting...</title>    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
-    <script src="assets/js/ui_dialog.js?v=1" defer></script>
+    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=index.php?tab=login"><script>window.location.href="index.php?tab=login";</script><title>Redirecting...</title>    <link rel="stylesheet" href="mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="ui_dialog.css?v=1">
+    <script src="ui_dialog.js?v=1" defer></script>
 </head><body style="font-family:sans-serif;text-align:center;padding:40px;background:#f8fafc;"><p>Redirecting to login...</p><p><a href="index.php?tab=login">Click here if not redirected</a></p></body></html>';
     exit;
 }

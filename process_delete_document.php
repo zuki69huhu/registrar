@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/audit_log_helper.php';
-require_once 'includes/upload_store_helper.php';
+require_once 'db.php';
+require_once 'audit_log_helper.php';
+require_once 'upload_store_helper.php';
 
 // Access control: Only allow users with the 'student' role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {

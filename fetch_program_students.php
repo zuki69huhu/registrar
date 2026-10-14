@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/name_helper.php';
+require_once 'db.php';
+require_once 'name_helper.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'systemadmin') {
     http_response_code(403);

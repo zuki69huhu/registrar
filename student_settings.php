@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/profile_config.php';
+require_once 'db.php';
+require_once 'profile_config.php';
 
 ensureProfileColumn($mysqli);
 
@@ -100,8 +100,8 @@ if (empty($full_name)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="assets/js/theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
-    <link rel="stylesheet" href="assets/css/theme_mode.css?v=9">
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Settings - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -520,15 +520,15 @@ if (empty($full_name)) {
             }
         }
     </style>
-    <link rel="stylesheet" href="assets/css/student_mobile.css?v=1">
-    <link rel="stylesheet" href="assets/css/student_sidebar.css?v=1">
-    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
-    <script src="assets/js/ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="assets/css/student_profile.css?v=9">
-    <script src="assets/js/student_profile.js?v=3" defer></script>
-    <script src="assets/js/address_picker.js?v=4" defer></script>
-    <script src="assets/js/school_picker.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_mobile.css?v=1">
+    <link rel="stylesheet" href="student_sidebar.css?v=1">
+    <link rel="stylesheet" href="mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="ui_dialog.css?v=1">
+    <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
+    <script src="address_picker.js?v=4" defer></script>
+    <script src="school_picker.js?v=1" defer></script>
 </head>
 <body class="student-shell" data-profile-missing="<?= count($profile_missing) ?>">
 <div class="dashboard">
@@ -537,7 +537,7 @@ if (empty($full_name)) {
             <i class="fas fa-bars"></i>
         </button>
         <a href="student_dashboard.php" class="mobile-appbar-brand">
-            <img src="assets/img/logo.jpg" alt="">
+            <img src="logo.jpg" alt="">
             <span>Student Portal</span>
         </a>
     </header>
@@ -548,7 +548,7 @@ if (empty($full_name)) {
         <div class="sidebar-header">
             <div class="logo-area">
                 <div class="logo-icon">
-                    <img src="assets/img/logo.jpg" alt="Logo"  style="width: 100%; height: 100%; object-fit: contain;">
+                    <img src="logo.jpg" alt="Logo"  style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="logo-text">Student Portal</div>
             </div>
@@ -737,7 +737,7 @@ if (empty($full_name)) {
                 
                 <?php
                 // Region -> province -> city / municipality -> barangay, filled by
-                // assets/js/address_picker.js from psgc/. $legacy is an address typed before
+                // address_picker.js from psgc/. $legacy is an address typed before
                 // the picker existed: shown so the student can pick the same place.
                 $place_picker = function ($name, $id, $place, array $opts = []) {
                     $place = is_array($place) ? $place : [];
@@ -875,7 +875,7 @@ if (empty($full_name)) {
                             <?php if (empty($level['always'])): ?><small>&ndash; optional</small><?php endif; ?>
                         </div>
                         <div class="pf-edu-grid"<?= !empty($level['school_list']) ? ' data-school-picker data-levels="' . (int)$level['school_list'] . '"' : '' ?>>
-                            <?php /* Address first: once the city is chosen, assets/js/school_picker.js lists that place's schools. */ ?>
+                            <?php /* Address first: once the city is chosen, school_picker.js lists that place's schools. */ ?>
                             <div class="pf-edu-place">
                                 <label class="form-label">School Address</label>
                                 <?= $place_picker($edu_name . '[place]', $edu_id . '_place', $edu, ['legacy' => $edu['address'] ?? '']) ?>

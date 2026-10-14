@@ -12,9 +12,9 @@
  */
 
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/request_config.php';
-require_once 'includes/profile_config.php';
+require_once 'db.php';
+require_once 'request_config.php';
+require_once 'profile_config.php';
 
 ensureProfileColumn($mysqli);
 
@@ -149,8 +149,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="assets/js/theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
-    <link rel="stylesheet" href="assets/css/theme_mode.css?v=9">
+    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=9">
     <title>Requests - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -443,15 +443,15 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
             .claim-slip { border: 2px solid #0f172a; background: white !important; }
         }
     </style>
-    <link rel="stylesheet" href="assets/css/request_form.css?v=6">
-    <link rel="stylesheet" href="assets/css/request_viewer.css?v=2">
-    <link rel="stylesheet" href="assets/css/student_mobile.css?v=1">
-    <link rel="stylesheet" href="assets/css/student_sidebar.css?v=1">
-    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
-    <script src="assets/js/ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="assets/css/student_profile.css?v=9">
-    <script src="assets/js/student_profile.js?v=3" defer></script>
+    <link rel="stylesheet" href="request_form.css?v=6">
+    <link rel="stylesheet" href="request_viewer.css?v=2">
+    <link rel="stylesheet" href="student_mobile.css?v=1">
+    <link rel="stylesheet" href="student_sidebar.css?v=1">
+    <link rel="stylesheet" href="mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="ui_dialog.css?v=1">
+    <script src="ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=9">
+    <script src="student_profile.js?v=3" defer></script>
 </head>
 <body class="student-shell">
     <header class="mobile-appbar">
@@ -459,7 +459,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
             <i class="fas fa-bars"></i>
         </button>
         <a href="student_dashboard.php" class="mobile-appbar-brand">
-            <img src="assets/img/logo.jpg" alt="">
+            <img src="logo.jpg" alt="">
             <span>Student Portal</span>
         </a>
     </header>
@@ -469,7 +469,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
         <div class="sidebar-header">
             <div class="logo-area">
                 <div class="logo-icon">
-                    <img src="assets/img/logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                    <img src="logo.jpg" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="logo-text">Student Portal</div>
             </div>
@@ -1062,8 +1062,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 </script>
 <?php endif; ?>
 
-<script src="assets/js/request_form.js?v=1"></script>
-<script src="assets/js/request_viewer.js?v=3"></script>
+<script src="request_form.js?v=1"></script>
+<script src="request_viewer.js?v=3"></script>
 <script>
     // Transferee documents only make sense once the student says they are one.
     (function () {

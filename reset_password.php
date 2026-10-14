@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'includes/db.php';
+require_once 'db.php';
 
 if (empty($_SESSION['can_reset_password']) || empty($_SESSION['reset_email'])) {
     header("Location: forgot_password.php");
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("ss", $hashed_pass, $_SESSION['reset_email']);
         
         if ($stmt->execute()) {
-            require_once 'includes/audit_log_helper.php';
+            require_once 'audit_log_helper.php';
             $uid_stmt = $mysqli->prepare("SELECT id FROM users WHERE email = ?");
             $uid_stmt->bind_param("s", $_SESSION['reset_email']);
             $uid_stmt->execute();
@@ -61,9 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button:hover { background: #1e40af; }
         .error { color: #ef4444; font-size: 14px; margin-bottom: 15px; }
     </style>
-    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
-    <script src="assets/js/ui_dialog.js?v=1" defer></script>
+    <link rel="stylesheet" href="mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="ui_dialog.css?v=1">
+    <script src="ui_dialog.js?v=1" defer></script>
 </head>
 <body>
     <div class="card">

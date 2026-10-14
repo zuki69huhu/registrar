@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/name_helper.php';
-require_once 'includes/audit_log_helper.php';
+require_once 'db.php';
+require_once 'name_helper.php';
+require_once 'audit_log_helper.php';
 
 // Only allow systemadmin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'systemadmin') {

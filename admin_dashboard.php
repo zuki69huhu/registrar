@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once 'includes/db.php';
-require_once 'includes/name_helper.php';
-require_once 'includes/audit_log_helper.php';
-require_once 'includes/programs.php';
+require_once 'db.php';
+require_once 'name_helper.php';
+require_once 'audit_log_helper.php';
+require_once 'programs.php';
 
 // Access control: Only allow users with the 'systemadmin' role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'systemadmin' || $_SESSION['email'] !== 'Admin') {
@@ -1278,10 +1278,10 @@ try {
             white-space: nowrap;
         }
     </style>
-    <script src="assets/js/search_helper.js?v=3"></script>
-    <link rel="stylesheet" href="assets/css/mobile_fixes.css?v=1">
-    <link rel="stylesheet" href="assets/css/ui_dialog.css?v=1">
-    <script src="assets/js/ui_dialog.js?v=1" defer></script>
+    <script src="search_helper.js?v=3"></script>
+    <link rel="stylesheet" href="mobile_fixes.css?v=1">
+    <link rel="stylesheet" href="ui_dialog.css?v=1">
+    <script src="ui_dialog.js?v=1" defer></script>
 </head>
 <body>
     <!-- Mobile Menu Button -->
@@ -1294,7 +1294,7 @@ try {
     <div class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-box">
-                <img src="assets/img/logo.jpg" alt="Logo"  style="width: 100%; height: 100%; object-fit: contain;">
+                <img src="logo.jpg" alt="Logo"  style="width: 100%; height: 100%; object-fit: contain;">
             </div>
             <span class="sidebar-brand">System Admin</span>
         </div>
