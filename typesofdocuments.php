@@ -206,6 +206,9 @@ if ($res) {
             font-family: 'Inter', sans-serif;
             font-size: 0.9rem;
         }
+        .modal-content input[type="text"].is-invalid { border-color: #ef4444; margin-bottom: 6px; }
+        .type-name-error { color: #f87171; font-size: 0.82rem; margin: 0 0 15px; }
+        .type-name-error[hidden] { display: none; }
         .modal-content textarea {
             resize: vertical;
             min-height: 80px;
@@ -390,7 +393,7 @@ if ($res) {
                                     <td data-label="Name"><?= htmlspecialchars($type['name']) ?></td>
                                     <td data-label="Actions">
                                         <div class="action-buttons">
-                                            <button class="action-btn btn-edit" onclick="openModal(<?= $type['id'] ?>, '<?= htmlspecialchars(addslashes($type['name'])) ?>')"><i class="fas fa-edit"></i> Edit</button>
+                                            <button class="action-btn btn-edit" data-id="<?= (int)$type['id'] ?>" data-name="<?= htmlspecialchars($type['name']) ?>" onclick="openModal(this.dataset.id, this.dataset.name)"><i class="fas fa-edit"></i> Edit</button>
                                             <form action="process_document_type.php" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this document type?');">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="id" value="<?= $type['id'] ?>">
@@ -412,13 +415,14 @@ if ($res) {
         <div class="modal-content">
             <span class="close-button" onclick="closeModal()">&times;</span>
             <h3 id="modalTitle">Add Document Type</h3>
-            <form action="process_document_type.php" method="POST">
+            <form action="process_document_type.php" method="POST" id="documentTypeForm" novalidate>
                 <input type="hidden" name="id" id="typeId">
                 <input type="hidden" name="action" id="formAction" value="add">
                 
                 <div class="form-group">
                     <label for="typeName">Document Type Name</label>
-                    <input type="text" id="typeName" name="name" required>
+                    <input type="text" id="typeName" name="name" required maxlength="255" autocomplete="off" aria-describedby="typeNameError">
+                    <p class="type-name-error" id="typeNameError" role="alert" hidden></p>
                 </div>
                 
                 <div class="modal-buttons">
@@ -430,11 +434,41 @@ if ($res) {
     </div>
 
     <script>
+        // Same rule as docTypeKey() in process_document_type.php, which has the final say:
+        // "PSA", "psa", "P.S.A." and "P S A" are all one name.
+        const DOC_TYPES = <?= json_encode(array_map(fn($t) => ['id' => (int)$t['id'], 'name' => $t['name']], $document_types)) ?>;
+        function docTypeKey(name) {
+            return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+        function typeNameProblem() {
+            const name = document.getElementById('typeName').value.trim();
+            const id = Number(document.getElementById('typeId').value) || 0;
+            if (!name) return 'Please enter a document type name.';
+            const key = docTypeKey(name);
+            if (!key) return 'The name must contain letters or numbers.';
+            const twin = DOC_TYPES.find(t => t.id !== id && docTypeKey(t.name) === key);
+            return twin ? '"' + name + '" is the same as the existing document type "' + twin.name + '".' : '';
+        }
+        function showTypeNameProblem(message) {
+            const input = document.getElementById('typeName'), box = document.getElementById('typeNameError');
+            box.textContent = message;
+            box.hidden = !message;
+            input.classList.toggle('is-invalid', !!message);
+        }
+        document.getElementById('documentTypeForm').addEventListener('submit', function (e) {
+            const problem = typeNameProblem();
+            if (problem) { e.preventDefault(); showTypeNameProblem(problem); document.getElementById('typeName').focus(); }
+        });
+        document.getElementById('typeName').addEventListener('input', function () {
+            if (!document.getElementById('typeNameError').hidden) showTypeNameProblem(typeNameProblem());
+        });
+
         function openModal(id = '', name = '') {
             document.getElementById('modalTitle').innerText = id ? 'Edit Document Type' : 'Add Document Type';
             document.getElementById('typeId').value = id;
             document.getElementById('typeName').value = name;
             document.getElementById('formAction').value = id ? 'update' : 'add';
+            showTypeNameProblem('');
             document.getElementById('documentTypeModal').style.display = 'flex';
         }
 
