@@ -811,6 +811,15 @@ if (!empty($user_institution)) {
         ::-webkit-scrollbar-thumb { background: #2d3f55; border-radius: 3px; }
 
         /* Send All Reminder */
+        .btn-excel {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 16px; border-radius: 10px; text-decoration: none;
+            background: rgba(16, 185, 129, 0.14); color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-excel:hover { background: #10b981; color: #fff; border-color: #10b981; }
         .btn-send-all {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 9px 18px;
@@ -839,7 +848,7 @@ if (!empty($user_institution)) {
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="student_profile.css?v=9">
+    <link rel="stylesheet" href="student_profile.css?v=11">
     <script src="student_profile.js?v=3" defer></script>
 </head>
 <body>
@@ -1028,6 +1037,13 @@ if (!empty($user_institution)) {
                             <input type="search" id="studentSearch" placeholder="Search name or student ID..." aria-label="Search students" autocomplete="off">
                         </div>
                         <span class="search-count" id="searchCount" aria-live="polite"></span>
+                        <?php if (!empty($students)): ?>
+                        <?php /* The same students as this table: the course and year chosen above. */ ?>
+                        <a class="btn-excel" href="export_student_profiles.php?<?= htmlspecialchars(http_build_query(array_filter(['course' => $filter_course, 'year' => $filter_year], 'strlen'))) ?>"
+                           title="Download the profiles of the students listed here as an Excel file">
+                            <i class="fas fa-file-excel"></i> Download Excel
+                        </a>
+                        <?php endif; ?>
                         <?php if (!empty($students)): ?>
                         <button class="btn-send-all" onclick="sendAllReminders()" id="btnSendAll">
                             <i class="fas fa-bell"></i> Notify All Incomplete

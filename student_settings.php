@@ -18,6 +18,50 @@ if (!$user_id) {
     exit;
 }
 
+// Change Password - the same rules as the registrar's Settings. The result is
+// shown inside the card after a redirect, so a refresh never posts it twice.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    $current  = (string)($_POST['current_password'] ?? '');
+    $new_pass = (string)($_POST['new_password'] ?? '');
+    $confirm  = (string)($_POST['confirm_password'] ?? '');
+
+    $pw_stmt = $mysqli->prepare("SELECT password FROM users WHERE id = ?");
+    $pw_stmt->bind_param("i", $user_id);
+    $pw_stmt->execute();
+    $pw_row = $pw_stmt->get_result()->fetch_assoc();
+    $pw_stmt->close();
+
+    if (!$pw_row || !password_verify($current, $pw_row['password'])) {
+        [$msg, $type] = ['Your current password is incorrect.', 'error'];
+    } elseif (strlen($new_pass) < 6) {
+        [$msg, $type] = ['The new password must be at least 6 characters.', 'error'];
+    } elseif ($new_pass !== $confirm) {
+        [$msg, $type] = ['The new passwords do not match.', 'error'];
+    } elseif (password_verify($new_pass, $pw_row['password'])) {
+        [$msg, $type] = ['The new password must be different from your current one.', 'error'];
+    } else {
+        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+        $up_stmt = $mysqli->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $up_stmt->bind_param("si", $hash, $user_id);
+        $ok = $up_stmt->execute();
+        $up_stmt->close();
+        if ($ok) {
+            require_once 'audit_log_helper.php';
+            logAudit($mysqli, $user_id, 'PASSWORD_CHANGED', 'Changed their password from Settings.', $user_id);
+            [$msg, $type] = ['Your password has been changed.', 'success'];
+        } else {
+            [$msg, $type] = ['Your password could not be changed. Please try again.', 'error'];
+        }
+    }
+    $_SESSION['pw_msg'] = $msg;
+    $_SESSION['pw_msg_type'] = $type;
+    header("Location: student_settings.php#change-password");
+    exit;
+}
+$pw_msg = $_SESSION['pw_msg'] ?? '';
+$pw_msg_type = $_SESSION['pw_msg_type'] ?? 'success';
+unset($_SESSION['pw_msg'], $_SESSION['pw_msg_type']);
+
 $stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, student_id, email, profile_picture, year_level, course, institution, contact_number, address, section, profile_data FROM users WHERE id = ?");
 if (!$stmt) {
     $_SESSION['flash'] = "System error. Please try again later.";
@@ -525,7 +569,7 @@ if (empty($full_name)) {
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="student_profile.css?v=9">
+    <link rel="stylesheet" href="student_profile.css?v=11">
     <script src="student_profile.js?v=3" defer></script>
     <script src="address_picker.js?v=4" defer></script>
     <script src="school_picker.js?v=1" defer></script>
@@ -917,23 +961,33 @@ if (empty($full_name)) {
             </form>
         </div>
 
-        <div class="card" id="appearance" style="margin-bottom: 24px;">
+        <div class="card" id="change-password" style="margin-bottom: 24px;">
             <div class="card-header">
-                <h3><i class="fas fa-circle-half-stroke"></i> Appearance</h3>
+                <h3><i class="fas fa-lock"></i> Change Password</h3>
             </div>
-            <div class="theme-choices">
-                <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">
-                    <span class="theme-choice-icon"><i class="fas fa-sun"></i></span>
-                    <span><strong>Light mode</strong><small>Bright background, dark text</small></span>
-                    <i class="fas fa-circle-check theme-choice-check"></i>
-                </button>
-                <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">
-                    <span class="theme-choice-icon"><i class="fas fa-moon"></i></span>
-                    <span><strong>Dark mode</strong><small>Dark background, light text</small></span>
-                    <i class="fas fa-circle-check theme-choice-check"></i>
-                </button>
-            </div>
-            <p class="theme-note">Applies right away to every page of your portal on this device.</p>
+            <p class="pw-sub">Update your account password. Use at least 6 characters, and avoid one you use elsewhere.</p>
+            <?php if ($pw_msg !== ''): ?>
+                <div class="pf-flash<?= $pw_msg_type === 'error' ? ' is-error' : '' ?>" role="status"><?= htmlspecialchars($pw_msg) ?></div>
+            <?php endif; ?>
+            <form method="POST" action="student_settings.php#change-password" class="pw-form" autocomplete="off">
+                <input type="hidden" name="change_password" value="1">
+                <?php foreach ([['current_password', 'Current Password', 'Enter current password', 'current-password'],
+                                ['new_password', 'New Password', 'Enter new password (min 6 chars)', 'new-password'],
+                                ['confirm_password', 'Confirm New Password', 'Re-enter new password', 'new-password']] as [$pw_name, $pw_label, $pw_hint, $pw_auto]): ?>
+                    <div class="pw-row">
+                        <label class="form-label" for="pw_<?= $pw_name ?>"><?= $pw_label ?></label>
+                        <div class="pw-field">
+                            <input type="password" class="form-input" id="pw_<?= $pw_name ?>" name="<?= $pw_name ?>" placeholder="<?= $pw_hint ?>"
+                                   autocomplete="<?= $pw_auto ?>" required<?= $pw_name !== 'current_password' ? ' minlength="6"' : '' ?>>
+                            <button type="button" class="pw-eye" data-pw-toggle="pw_<?= $pw_name ?>" aria-label="Show password" title="Show password"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <span class="pf-hint pw-match" id="pwMatch" aria-live="polite"></span>
+                <div class="pf-actions" style="margin-top: 6px;">
+                    <button type="submit" class="pf-btn is-primary"><i class="fas fa-key"></i> Update Password</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -965,6 +1019,32 @@ if (empty($full_name)) {
     })();
 </script>
 <?php endif; ?>
+<script>
+    // Change Password: show / hide each box, and say at once whether the two new ones match.
+    (function () {
+        document.querySelectorAll('[data-pw-toggle]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var input = document.getElementById(button.getAttribute('data-pw-toggle'));
+                var show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                button.innerHTML = '<i class="fas ' + (show ? 'fa-eye-slash' : 'fa-eye') + '"></i>';
+                button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            });
+        });
+        var fresh = document.getElementById('pw_new_password');
+        var again = document.getElementById('pw_confirm_password');
+        var note = document.getElementById('pwMatch');
+        if (!fresh || !again || !note) return;
+        function check() {
+            var mismatch = again.value !== '' && again.value !== fresh.value;
+            again.setCustomValidity(mismatch ? 'The new passwords do not match.' : '');
+            note.textContent = again.value === '' ? '' : (mismatch ? 'The new passwords do not match.' : 'The new passwords match.');
+            note.style.color = mismatch ? '#dc2626' : '#16a34a';
+        }
+        fresh.addEventListener('input', check);
+        again.addEventListener('input', check);
+    })();
+</script>
 <script>
     // Edit Profile: show the age as soon as a birth date is picked, and stop a
     // school's ending year from being earlier than its starting year.

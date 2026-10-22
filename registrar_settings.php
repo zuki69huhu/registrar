@@ -15,6 +15,53 @@ if (!$user_id) {
     exit;
 }
 
+// Account Information: the registrar edits their own name and e-mail. The
+// institution is not theirs to change - it decides which students they see.
+$account_msg = $_SESSION['account_msg'] ?? '';
+$account_msg_type = $_SESSION['account_msg_type'] ?? 'success';
+$account_old = $_SESSION['account_old'] ?? null;
+unset($_SESSION['account_msg'], $_SESSION['account_msg_type'], $_SESSION['account_old']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
+    $clean = fn($v) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$v) ?? ''), 0, 100);
+    $first = $clean($_POST['first_name'] ?? '');
+    $middle = $clean($_POST['middle_name'] ?? '');
+    $last = $clean($_POST['last_name'] ?? '');
+    $email = trim((string)($_POST['email'] ?? ''));
+    $error = '';
+    if ($first === '' || $last === '') {
+        $error = 'First name and last name are required.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) {
+        $error = 'Please enter a valid e-mail address.';
+    } else {
+        $dup = $mysqli->prepare("SELECT id FROM users WHERE email = ? AND id <> ?");
+        $dup->bind_param("si", $email, $user_id);
+        $dup->execute();
+        if ($dup->get_result()->fetch_assoc()) $error = 'That e-mail address is already used by another account.';
+        $dup->close();
+    }
+    if ($error === '') {
+        $up = $mysqli->prepare("UPDATE users SET first_name = ?, middle_name = ?, last_name = ?, email = ? WHERE id = ?");
+        $up->bind_param("ssssi", $first, $middle, $last, $email, $user_id);
+        if ($up->execute()) {
+            $_SESSION['email'] = $email;     // the session carries the e-mail it signed in with
+            require_once 'audit_log_helper.php';
+            logAudit($mysqli, $user_id, 'ACCOUNT_UPDATED', 'Updated their account information (name / e-mail).', $user_id);
+            $_SESSION['account_msg'] = 'Your account information has been updated.';
+            $_SESSION['account_msg_type'] = 'success';
+        } else {
+            $error = 'Your account information could not be saved. Please try again.';
+        }
+        $up->close();
+    }
+    if ($error !== '') {
+        $_SESSION['account_msg'] = $error;
+        $_SESSION['account_msg_type'] = 'error';
+        $_SESSION['account_old'] = ['first_name' => $first, 'middle_name' => $middle, 'last_name' => $last, 'email' => $email];
+    }
+    header("Location: registrar_settings.php#account");
+    exit;
+}
+
 // Fetch user details from the database (including institution to fix the bug)
 $stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, email, institution FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
@@ -561,6 +608,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         }
 
         /* PASSWORD FORM */
+        /* Account Information: the details, or - after Edit - the form in their place */
+        #account .card-header { flex-wrap: nowrap; }
+        #account .card-header-text { min-width: 0; }
+        .acct-edit-btn {
+            margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 7px;
+            padding: 8px 14px; border-radius: 10px; cursor: pointer;
+            background: rgba(59,130,246,0.14); color: #93c5fd; border: 1px solid rgba(59,130,246,0.35);
+            font-family: inherit; font-size: 0.8rem; font-weight: 600;
+        }
+        .acct-edit-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+        .acct-form { display: none; }
+        #account.is-editing .acct-form { display: block; }
+        #account.is-editing .info-grid, #account.is-editing .acct-edit-btn { display: none; }
+        .acct-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+        .acct-grid .acct-wide { grid-column: 1 / -1; }
+        .acct-req { color: #f87171; }
+        .acct-hint { display: block; margin: 6px 0 0; font-size: 0.75rem; color: var(--text-muted, #94a3b8); }
+        .acct-form .form-input:disabled { opacity: 0.6; cursor: not-allowed; }
+        .acct-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .acct-actions .submit-btn { width: auto; margin: 0; }
+        .acct-cancel {
+            padding: 10px 18px; border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 600;
+            background: transparent; color: var(--text-secondary, #cbd5e1); border: 1px solid rgba(255,255,255,0.15);
+        }
+        .acct-cancel:hover { background: rgba(255,255,255,0.06); }
+        @media (max-width: 600px) {
+            .acct-grid { grid-template-columns: 1fr; }
+            .acct-actions > * { flex: 1 1 100%; justify-content: center; }
+            .acct-form .form-input { font-size: 16px; }
+        }
+
         .form-group {
             margin-bottom: 16px;
         }
@@ -879,42 +957,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         <div class="content">
             <div class="settings-grid">
 
-                <!-- APPEARANCE CARD (Full Width) -->
-                <div class="card full-width">
-                    <div class="card-header">
-                        <div class="card-header-icon gold"><i class="fas fa-circle-half-stroke"></i></div>
-                        <div class="card-header-text">
-                            <h3>Appearance</h3>
-                            <p>Choose light mode or dark mode</p>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="theme-choices">
-                            <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">
-                                <span class="theme-choice-icon"><i class="fas fa-sun"></i></span>
-                                <span><strong>Light mode</strong><small>Bright background, dark text</small></span>
-                                <i class="fas fa-circle-check theme-choice-check"></i>
-                            </button>
-                            <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">
-                                <span class="theme-choice-icon"><i class="fas fa-moon"></i></span>
-                                <span><strong>Dark mode</strong><small>Dark background, light text</small></span>
-                                <i class="fas fa-circle-check theme-choice-check"></i>
-                            </button>
-                        </div>
-                        <p class="theme-note">Applies right away to every page of your portal on this device.</p>
-                    </div>
-                </div>
-
                 <!-- ACCOUNT INFO CARD -->
-                <div class="card">
+                <div class="card<?= $account_old ? ' is-editing' : '' ?>" id="account">
                     <div class="card-header">
                         <div class="card-header-icon blue"><i class="fas fa-user-circle"></i></div>
                         <div class="card-header-text">
                             <h3>Account Information</h3>
                             <p>Your profile details</p>
                         </div>
+                        <button type="button" class="acct-edit-btn" id="acctEditBtn" aria-controls="acctForm"
+                                aria-expanded="<?= $account_old ? 'true' : 'false' ?>"><i class="fas fa-pen"></i> <span>Edit</span></button>
                     </div>
                     <div class="card-body">
+                        <?php if ($account_msg): ?>
+                            <div class="alert alert-<?= $account_msg_type === 'error' ? 'error' : 'success' ?>">
+                                <i class="fas fa-<?= $account_msg_type === 'error' ? 'exclamation-circle' : 'check-circle' ?>"></i>
+                                <?= htmlspecialchars($account_msg) ?>
+                            </div>
+                        <?php endif; ?>
                         <div class="user-avatar-section">
                             <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
                             <div class="user-avatar-info">
@@ -947,6 +1007,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                             </div>
                             <?php endif; ?>
                         </div>
+
+                        <?php $acct = $account_old ?: $user_data; ?>
+                        <form method="POST" class="acct-form" id="acctForm" autocomplete="off">
+                            <input type="hidden" name="update_account" value="1">
+                            <div class="acct-grid">
+                                <div class="form-group">
+                                    <label for="acct_first">First Name <span class="acct-req">*</span></label>
+                                    <input type="text" id="acct_first" name="first_name" class="form-input" maxlength="100" required value="<?= htmlspecialchars($acct['first_name'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="acct_middle">Middle Name</label>
+                                    <input type="text" id="acct_middle" name="middle_name" class="form-input" maxlength="100" value="<?= htmlspecialchars($acct['middle_name'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="acct_last">Last Name <span class="acct-req">*</span></label>
+                                    <input type="text" id="acct_last" name="last_name" class="form-input" maxlength="100" required value="<?= htmlspecialchars($acct['last_name'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="acct_email">Email Address <span class="acct-req">*</span></label>
+                                    <input type="email" id="acct_email" name="email" class="form-input" maxlength="255" required value="<?= htmlspecialchars($acct['email'] ?? '') ?>">
+                                </div>
+                                <?php if (!empty($user_inst)): ?>
+                                <div class="form-group acct-wide">
+                                    <label>Institution</label>
+                                    <input type="text" class="form-input" value="<?= htmlspecialchars($user_inst) ?>" readonly disabled>
+                                    <small class="acct-hint">Set by the system administrator - it decides which students you see.</small>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <p class="acct-hint">Your e-mail address is also what you sign in with.</p>
+                            <div class="acct-actions">
+                                <button type="button" class="acct-cancel" id="acctCancel">Cancel</button>
+                                <button type="submit" class="submit-btn"><i class="fas fa-floppy-disk"></i> Save Changes</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -992,6 +1087,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
 
     <script>
+        // ─── ACCOUNT INFORMATION: Edit opens the form in place of the details ───
+        (function () {
+            const card = document.getElementById('account');
+            const edit = document.getElementById('acctEditBtn');
+            const cancel = document.getElementById('acctCancel');
+            const form = document.getElementById('acctForm');
+            if (!card || !edit || !cancel || !form) return;
+            const start = new FormData(form);
+            edit.addEventListener('click', () => {
+                card.classList.add('is-editing');
+                edit.setAttribute('aria-expanded', 'true');
+                document.getElementById('acct_first').focus();
+            });
+            cancel.addEventListener('click', () => {
+                start.forEach((value, name) => { if (form.elements[name]) form.elements[name].value = value; });
+                card.classList.remove('is-editing');
+                edit.setAttribute('aria-expanded', 'false');
+                edit.focus();
+            });
+        })();
+
         // ─── SIDEBAR TOGGLE ───
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('active');

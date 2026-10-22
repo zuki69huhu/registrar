@@ -1279,15 +1279,45 @@ try {
         }
     </style>
     <script src="search_helper.js?v=3"></script>
+    <style>
+        /* Phone / tablet: a fixed app bar holds the menu button, so it no longer
+           floats over the content while scrolling, and the top bar loses the
+           65px it used to leave for that floating button. */
+        .mobile-appbar { display: none; }
+        @media (max-width: 1024px) {
+            body { padding-top: 60px; }
+            .mobile-appbar {
+                display: flex; align-items: center; gap: 12px;
+                position: fixed; top: 0; left: 0; right: 0; z-index: 1040; height: 60px; padding: 0 16px;
+                background: rgba(15, 23, 42, 0.96); border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            }
+            .mobile-appbar .mobile-toggle {
+                position: static !important; display: flex !important; align-items: center; justify-content: center;
+                width: 42px; height: 42px; padding: 0 !important; border-radius: 12px; flex-shrink: 0;
+            }
+            .mobile-appbar-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: #f1f5f9; font-weight: 700; font-size: 17px; }
+            .mobile-appbar-brand img { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+            .topbar { padding: 14px 16px !important; }
+            .topbar-left, .topbar-left .search-bar { width: 100%; }
+            .topbar-left .search-bar input { width: 100% !important; font-size: 16px; }
+        }
+        @media (max-width: 480px) {
+            .topbar { padding: 12px !important; }
+        }
+    </style>
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
 </head>
 <body>
-    <!-- Mobile Menu Button -->
-    <button class="mobile-toggle" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </button>
+    <!-- Phone / tablet app bar, the same header the registrar and student pages use -->
+    <header class="mobile-appbar">
+        <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Open menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <span class="mobile-appbar-brand"><img src="logo.jpg" alt=""><span>System Admin</span></span>
+    </header>
     <div class="sidebar-overlay" onclick="closeSidebar()"></div>
 
     <!-- SIDEBAR -->
@@ -1354,8 +1384,9 @@ try {
                     <h2>Dashboard Overview</h2>
                 </div>
                 
+                <?php /* Each card opens the admin section that holds its numbers (submissions.php is a registrar page). */ ?>
                 <div class="stat-cards">
-                    <a href="submissions.php" class="stat-card">
+                    <a href="javascript:void(0)" class="stat-card" data-open-section="reports" title="Open Reports & Analytics">
                         <div class="stat-card-header">
                             <span class="stat-label">Total Documents</span>
                             <div class="stat-icon blue"><i class="fas fa-file-alt"></i></div>
@@ -1363,7 +1394,7 @@ try {
                         <div class="stat-value"><?= number_format($stats['total_docs']) ?></div>
                     </a>
                     
-                    <a href="submissions.php" class="stat-card">
+                    <a href="javascript:void(0)" class="stat-card" data-open-section="reports" title="Open Reports & Analytics">
                         <div class="stat-card-header">
                             <span class="stat-label">Approved</span>
                             <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
@@ -1371,7 +1402,7 @@ try {
                         <div class="stat-value"><?= number_format($stats['approved']) ?></div>
                     </a>
                     
-                    <a href="submissions.php" class="stat-card">
+                    <a href="javascript:void(0)" class="stat-card" data-open-section="reports" title="Open Reports & Analytics">
                         <div class="stat-card-header">
                             <span class="stat-label">Pending</span>
                             <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
@@ -1379,7 +1410,7 @@ try {
                         <div class="stat-value"><?= number_format($stats['pending']) ?></div>
                     </a>
                     
-                    <a href="javascript:void(0)" class="stat-card">
+                    <a href="javascript:void(0)" class="stat-card" data-open-section="accounts" title="Open Account Management">
                         <div class="stat-card-header">
                             <span class="stat-label">Active Students</span>
                             <div class="stat-icon purple"><i class="fas fa-user-graduate"></i></div>
@@ -2059,6 +2090,17 @@ try {
                 document.getElementById('preview-image').src = '';
             }, 300);
         }
+
+        // Dashboard cards open the section their numbers come from, as the menu would.
+        document.addEventListener('click', function (event) {
+            const card = event.target.closest('[data-open-section]');
+            if (!card) return;
+            event.preventDefault();
+            const id = card.dataset.openSection;
+            const link = Array.from(document.querySelectorAll('.nav-link')).find(l => (l.getAttribute('onclick') || '').indexOf("showSection('" + id + "'") !== -1);
+            showSection(id, link || null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
         function showSection(sectionId, element) {
             localStorage.setItem('admin-active-section', sectionId);

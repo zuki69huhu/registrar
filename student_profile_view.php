@@ -224,3 +224,8 @@ $age = profileAge($profile['birth_date'] ?? '');
         <?php endif; ?>
     </span>
 </div>
+<?php if (!$is_own): ?>
+<div class="sp-actions">
+    <a class="sp-excel" href="export_student_profiles.php?id=<?= (int)$target_id ?>"><i class="fas fa-file-excel"></i> Download as Excel</a>
+</div>
+<?php endif; ?>

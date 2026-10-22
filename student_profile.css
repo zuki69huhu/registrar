@@ -550,3 +550,34 @@ html[data-theme-base="dark"] .sp-skel-block {
 .pf-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .pf-done-actions .pf-btn { flex: 1 1 140px; }
 @media (prefers-reduced-motion: reduce) { .pf-done-card { animation: none; } }
+
+/* Registrar: the profile as an Excel file (export_student_profiles.php?id=N). */
+.sp-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.sp-excel {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px;
+    background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
+    font: 600 13px 'Inter', sans-serif; text-decoration: none;
+}
+.sp-excel:hover { background: #059669; color: #fff; border-color: #059669; }
+html[data-theme-base="dark"] .sp-excel { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); }
+html[data-theme-base="dark"] .sp-excel:hover { background: #10b981; color: #fff; border-color: #10b981; }
+@media (max-width: 560px) { .sp-actions .sp-excel { flex: 1; justify-content: center; } }
+
+/* ── Change Password (student_settings.php) ── */
+.pw-sub { margin: -4px 0 16px; font-size: 13px; color: #64748b; }
+.pw-form { max-width: 560px; }
+.pw-row { margin-bottom: 14px; }
+.pw-field { position: relative; }
+.pw-field .form-input { padding-right: 46px; }
+.pw-eye {
+    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+    width: 36px; height: 36px; border: none; border-radius: 8px;
+    background: transparent; color: #64748b; cursor: pointer;
+}
+.pw-eye:hover { background: #f1f5f9; color: #0f172a; }
+.pw-match { display: block; min-height: 16px; margin: -4px 0 4px; }
+@media (max-width: 560px) {
+    .pw-form { max-width: none; }
+    .pw-field .form-input { font-size: 16px; }
+    .pw-form .pf-actions .pf-btn { flex: 1 1 100%; }
+}

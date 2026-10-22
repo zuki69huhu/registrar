@@ -450,7 +450,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="student_profile.css?v=9">
+    <link rel="stylesheet" href="student_profile.css?v=11">
     <script src="student_profile.js?v=3" defer></script>
 </head>
 <body class="student-shell">
