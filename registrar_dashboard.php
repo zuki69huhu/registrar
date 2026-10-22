@@ -1036,64 +1036,6 @@ if (!empty($user_inst)) {
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #2d3f55; border-radius: 3px; }
-        /* Side Preview Panel Styles */
-        .preview-panel {
-            position: fixed;
-            right: -450px;
-            top: 0;
-            width: 450px;
-            height: 100vh;
-            background: var(--card-bg, #1e293b);
-            box-shadow: -5px 0 25px rgba(0,0,0,0.3);
-            z-index: 3000;
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            border-left: 1px solid var(--border-color);
-        }
-        .preview-panel.active { right: 0; }
-        .preview-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg, #1e293b);
-            color: var(--text-primary);
-        }
-        .preview-body {
-            flex: 1;
-            padding: 0;
-            overflow: hidden;
-            background: var(--main-bg, #0f172a);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-        #preview-frame { width: 100%; height: 100%; border: none; background: white; }
-        #preview-image { position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; object-fit: contain; margin: auto; }
-        .btn-close-preview {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-close-preview:hover { background: #fee2e2; color: #dc2626; }
-        @media (max-width: 768px) {
-            .preview-panel {
-                width: 100%;
-                right: -100%;
-                border-left: none;
-            }
-        }
         .sidebar-nav { overflow-y: auto; min-height: 0; }
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         body.sidebar-open .sidebar-overlay { display: block; }
@@ -1106,6 +1048,7 @@ if (!empty($user_inst)) {
         .cell-student-name { font-weight: 600; }
     </style>
     <link rel="stylesheet" href="registrar_mobile.css?v=2">
+    <link rel="stylesheet" href="doc_viewer.css?v=1">
     <script src="search_helper.js?v=3"></script>
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
@@ -1294,7 +1237,7 @@ if (!empty($user_inst)) {
                                     </td>
                                     <td data-label="Action">
                                         <div style="display: flex; gap: 8px;">
-                                            <button type="button" onclick="viewDocument('<?= htmlspecialchars($sub['file_path']) ?>', '<?= htmlspecialchars($sub['file_name']) ?>')" class="action-btn btn-view" title="View Document">
+                                            <button type="button" class="action-btn btn-view" data-file="<?= htmlspecialchars($sub['file_path']) ?>" data-title="<?= htmlspecialchars($recent_type !== '' ? $recent_type : $sub['file_name']) ?>" onclick="openPreview(this.dataset.file, this.dataset.title)" title="View Document">
                                                 <i class="fas fa-eye"></i> View
                                             </button>
                                         </div>
@@ -1392,17 +1335,6 @@ if (!empty($user_inst)) {
         </div><!-- /content -->
     </div><!-- /main -->
 
-    <!-- Side Preview Panel -->
-    <div id="preview-panel" class="preview-panel">
-        <div class="preview-header">
-            <h3 style="margin:0; font-size: 16px;"><i class="fas fa-file-image"></i> <span id="preview-title">Document Preview</span></h3>
-            <button class="btn-close-preview" onclick="closePreview()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="preview-body">
-            <iframe id="preview-frame" src=""></iframe>
-            <img id="preview-image" src="" style="display: none;">
-        </div>
-    </div>
     <!-- Broadcast Modal -->
     <div id="broadcastModal" class="broadcast-modal">
         <div class="broadcast-modal-content">
@@ -1503,31 +1435,6 @@ if (!empty($user_inst)) {
             document.getElementById('rejectModal').style.display = 'none';
         }
         
-        function viewDocument(path, name) {
-            document.getElementById('preview-title').innerText = name || 'Document Preview';
-            const ext = path.split('.').pop().toLowerCase();
-            const isImage = ['jpg','jpeg','png','gif'].includes(ext);
-            
-            if (isImage) {
-                document.getElementById('preview-frame').style.display = 'none';
-                document.getElementById('preview-image').src = path;
-                document.getElementById('preview-image').style.display = 'block';
-            } else {
-                document.getElementById('preview-image').style.display = 'none';
-                document.getElementById('preview-frame').src = path;
-                document.getElementById('preview-frame').style.display = 'block';
-            }
-            document.getElementById('preview-panel').classList.add('active');
-        }
-
-        function closePreview() {
-            document.getElementById('preview-panel').classList.remove('active');
-            setTimeout(() => {
-                document.getElementById('preview-frame').src = '';
-                document.getElementById('preview-image').src = '';
-            }, 300);
-        }
-
         function showSection(sectionId, element) {
             localStorage.setItem('registrar-active-section', sectionId);
             if (window.innerWidth <= 768) {
@@ -1593,5 +1500,6 @@ if (!empty($user_inst)) {
         document.body.classList.remove('sidebar-open');
     }
 </script>
+<script src="doc_viewer.js?v=1"></script>
 </body>
 </html>
