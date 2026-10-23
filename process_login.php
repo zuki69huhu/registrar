@@ -13,7 +13,7 @@ $email = trim($_POST['email']);
 $password = trim($_POST['password']);
 
 // Fetch user
-$stmt = $mysqli->prepare("SELECT id, email, password, role, is_verified FROM users WHERE email = ?");
+$stmt = $mysqli->prepare("SELECT id, email, password, role, is_verified, is_active, is_archived FROM users WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -25,6 +25,22 @@ if ($user && password_verify($password, $user['password'])) {
     if ($user['role'] === 'systemadmin' && $email !== $user['email']) {
         logAudit($mysqli, null, 'LOGIN_FAILED', 'Failed admin login: email letter case did not match.', $user['id']);
         $_SESSION['flash'] = "Invalid email or password.";
+        header("Location: index.php?tab=login");
+        exit;
+    }
+
+    // Archived (by the system administrator or a registrar): Restore gives the account back.
+    if (!empty($user['is_archived']) && $user['role'] !== 'systemadmin') {
+        logAudit($mysqli, null, 'LOGIN_BLOCKED', 'Login blocked: account is archived.', $user['id']);
+        $_SESSION['flash'] = "Your account has been archived. Please contact the registrar office.";
+        header("Location: index.php?tab=login");
+        exit;
+    }
+
+    // Deactivated by the system administrator
+    if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
+        logAudit($mysqli, null, 'LOGIN_BLOCKED', 'Login blocked: account is deactivated.', $user['id']);
+        $_SESSION['flash'] = "Your account has been deactivated. Please contact the registrar office.";
         header("Location: index.php?tab=login");
         exit;
     }

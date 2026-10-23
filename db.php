@@ -1,11 +1,46 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+// Philippine time everywhere. php.ini says Europe/Berlin, so without this every
+// date() and every "x hours ago" was six hours off from what MySQL stored.
+date_default_timezone_set('Asia/Manila');
+
 $mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($mysqli->connect_errno) {
     die("DB connection failed: " . $mysqli->connect_error);
 }
 $mysqli->set_charset('utf8mb4');
+// NOW() / CURRENT_TIMESTAMP in Philippine time too, whatever the machine's clock zone.
+try { $mysqli->query("SET time_zone = '+08:00'"); } catch (Exception $e) {}
+
+// users.is_active / is_archived are read by the sign-out check below and by process_login.php,
+// so add them before anything selects them (check first: an ALTER on every request is costly).
+try {
+    $have_cols = [];
+    $cols_res = $mysqli->query("SHOW COLUMNS FROM users WHERE Field IN ('is_active', 'is_archived')");
+    while ($cols_res && ($col = $cols_res->fetch_assoc())) $have_cols[$col['Field']] = true;
+    if (empty($have_cols['is_active']))   $mysqli->query("ALTER TABLE users ADD COLUMN is_active TINYINT(1) DEFAULT 1");
+    if (empty($have_cols['is_archived'])) $mysqli->query("ALTER TABLE users ADD COLUMN is_archived TINYINT(1) DEFAULT 0");
+} catch (Exception $e) {}
+
+// A signed-in account that has been deactivated or archived is signed out on its
+// next request, not only at its next login.
+if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user_id'])) {
+    try {
+        $active_stmt = $mysqli->prepare("SELECT is_active, is_archived, role FROM users WHERE id = ?");
+        $active_stmt->bind_param("i", $_SESSION['user_id']);
+        $active_stmt->execute();
+        $active_row = $active_stmt->get_result()->fetch_assoc();
+        $active_stmt->close();
+        if ($active_row && $active_row['role'] !== 'systemadmin'
+            && ((int)$active_row['is_active'] === 0 || (int)$active_row['is_archived'] === 1)) {
+            $_SESSION = ['flash' => 'Your account has been ' . ((int)$active_row['is_active'] === 0 ? 'deactivated' : 'archived')
+                                  . '. Please contact the registrar office.'];
+            header("Location: index.php?tab=login");
+            exit;
+        }
+    } catch (Exception $e) {}
+}
 
 // Auto-migrate
 try { $mysqli->query("ALTER TABLE notifications ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY"); } catch (Exception $e) {}

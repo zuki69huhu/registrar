@@ -1255,6 +1255,64 @@ try {
             .report-chart-box { height: 275px; }
         }
 
+        /* ─── ACCOUNTS & ARCHIVE ─── */
+        .nav-link:focus { outline: none; }
+        .nav-link:focus-visible { outline: none; box-shadow: inset 0 0 0 2px rgba(201,162,39,0.45); }
+        .acct-head h2 { margin: 0; }
+        .acct-sub { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-muted); }
+        .status-badge.muted { background: rgba(100,116,139,0.2); color: #94a3b8; }
+        .status-badge.muted::before { display: none; }
+        .acct-table td { vertical-align: middle; }
+        .acct-email { word-break: break-all; }
+        .acct-status { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .acct-status small { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+        .acct-role { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 600;
+                     background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+        .acct-role.is-registrar { background: rgba(201,162,39,0.14); color: var(--accent-gold); }
+        .acct-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        .acct-actions form { margin: 0; display: inline-flex; }
+        .acct-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 8px;
+                    border: 1px solid transparent; cursor: pointer; font-family: inherit; font-size: 0.76rem; font-weight: 600;
+                    transition: background 0.15s, color 0.15s; white-space: nowrap; }
+        .acct-btn.is-red   { background: rgba(239,68,68,0.12);  color: #f87171; border-color: rgba(239,68,68,0.3); }
+        .acct-btn.is-green { background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.3); }
+        .acct-btn.is-amber { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
+        .acct-btn.is-blue  { background: rgba(59,130,246,0.12); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+        .acct-btn.is-red:hover   { background: #ef4444; color: #fff; }
+        .acct-btn.is-green:hover { background: #10b981; color: #fff; }
+        .acct-btn.is-amber:hover { background: #f59e0b; color: #111827; }
+        .acct-btn.is-blue:hover  { background: #3b82f6; color: #fff; }
+        .acct-empty td { text-align: center; padding: 28px 16px !important; color: var(--text-muted); }
+        .admin-flash { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding: 12px 16px; border-radius: 10px;
+                       background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; font-size: 0.86rem; }
+        .admin-flash button { margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; font-size: 1rem; }
+        @media (max-width: 1100px) and (min-width: 769px) {
+            .acct-btn span { display: none; }
+            .acct-btn { width: 32px; padding: 0; justify-content: center; }
+        }
+        @media (max-width: 768px) {
+            /* Card rows: caption on the left, value on the right, actions full width */
+            .acct-table tr { display: block; padding: 6px 14px; margin-bottom: 12px; border-radius: 12px;
+                             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); }
+            .acct-table td { display: flex !important; justify-content: space-between; align-items: center; gap: 14px;
+                             padding: 10px 0 !important; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); }
+            .acct-table td:last-child { border-bottom: none; }
+            .acct-table td::before { position: static !important; transform: none !important; width: auto !important; padding: 0 !important;
+                                     content: attr(data-label); flex: 0 0 auto; text-align: left; white-space: nowrap;
+                                     font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+            .acct-table .acct-email { word-break: break-all; min-width: 0; }
+            .acct-status { align-items: flex-end; }
+            .acct-status small { white-space: normal; text-align: right; }
+            .acct-table td[data-label="Actions"] { display: block !important; }
+            .acct-table td[data-label="Actions"]::before { display: none; }
+            .acct-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+            .acct-actions form, .acct-btn { width: 100%; }
+            .acct-btn { justify-content: center; height: 40px; font-size: 0.85rem; }
+            .acct-empty td { display: block !important; text-align: center; }
+            #accounts-section .table-card, #archive-section .table-card { padding: 0; background: none; border: none; box-shadow: none; }
+            .acct-empty td::before { display: none; }
+        }
+
         .sidebar-nav { overflow-y: auto; min-height: 0; }
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         body.sidebar-open .sidebar-overlay { display: block; }
@@ -1378,6 +1436,11 @@ try {
 
         <!-- CONTENT AREA -->
         <div class="content">
+            <?php if (!empty($_SESSION['flash'])): ?>
+                <div class="admin-flash" role="status"><i class="fas fa-circle-check"></i><span><?= htmlspecialchars($_SESSION['flash']) ?></span>
+                    <button type="button" aria-label="Dismiss" onclick="this.parentNode.remove()">&times;</button></div>
+                <?php unset($_SESSION['flash']); ?>
+            <?php endif; ?>
             <!-- DASHBOARD SECTION -->
             <div id="dashboard-section" class="content-section active">
                 <div class="card-header" style="margin-bottom: 20px;">
@@ -1525,13 +1588,60 @@ try {
                 </div>
             </div>
 
+            <?php
+            // ── Accounts & Archive: one status rule, the last sign-in, and who archived ──
+            // Last successful sign-in per account (the LOGIN audit rows).
+            $last_login = [];
+            $ll = $mysqli->query("SELECT user_id, MAX(created_at) AS at FROM audit_logs WHERE action = 'LOGIN' AND user_id IS NOT NULL GROUP BY user_id");
+            if ($ll) while ($r = $ll->fetch_assoc()) $last_login[(int)$r['user_id']] = $r['at'];
+            // When and by whom each archived account was archived (the latest archive row).
+            $archived_info = [];
+            $ai = $mysqli->query("SELECT a.target_user_id, a.created_at, u.first_name, u.middle_name, u.last_name, u.email, u.role
+                                  FROM audit_logs a
+                                  JOIN (SELECT target_user_id, MAX(id) AS mid FROM audit_logs
+                                        WHERE action IN ('USER_ARCHIVED', 'STUDENT_ARCHIVED') AND target_user_id IS NOT NULL
+                                        GROUP BY target_user_id) m ON m.mid = a.id
+                                  LEFT JOIN users u ON u.id = a.user_id");
+            if ($ai) while ($r = $ai->fetch_assoc()) $archived_info[(int)$r['target_user_id']] = $r;
+
+            // What the account can actually do right now - the same rules process_login.php applies.
+            $account_status = function (array $u) {
+                if (isset($u['is_active']) && (int)$u['is_active'] === 0) return ['Deactivated', 'rejected', 'Cannot sign in'];
+                $v = (int)$u['is_verified'];
+                if ($v === 0) return ['Unverified', 'muted', 'E-mail not verified yet'];
+                if ($u['role'] === 'student' && $v === 1) return ['Pending approval', 'pending', 'Waiting for a registrar'];
+                if ($u['role'] === 'student' && $v === 3) return ['Rejected', 'rejected', 'Registration rejected'];
+                return ['Active', 'approved', ''];
+            };
+            $when = function ($at) {
+                if (!$at) return '';
+                $ts = strtotime($at);
+                $diff = time() - $ts;
+                if ($diff < 60) return 'just now';
+                if ($diff < 3600) return floor($diff / 60) . ' min ago';
+                if ($diff < 86400) return floor($diff / 3600) . ' hr ago';
+                if (date('Y', $ts) === date('Y')) return date('M j, g:i A', $ts);
+                return date('M j, Y', $ts);
+            };
+            $account_rows = function ($archived) use ($mysqli) {
+                $res = $mysqli->query("SELECT * FROM users WHERE role IN ('student', 'registrar') AND is_archived = " . ($archived ? 1 : 0) . "
+                                       ORDER BY role = 'registrar' DESC, last_name ASC, first_name ASC");
+                return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+            };
+            $accounts = $account_rows(false);
+            $archived_accounts = $account_rows(true);
+            ?>
+
             <!-- ACCOUNTS SECTION -->
             <div id="accounts-section" class="content-section">
-                <div class="card-header" style="margin-bottom: 20px;">
-                    <h2>Account Management</h2>
+                <div class="card-header acct-head" style="margin-bottom: 20px;">
+                    <div>
+                        <h2>Account Management</h2>
+                        <p class="acct-sub"><?= count($accounts) ?> account<?= count($accounts) === 1 ? '' : 's' ?> &middot; times are Philippine time</p>
+                    </div>
                 </div>
                 <div class="table-card">
-                    <table class="student-table">
+                    <table class="student-table acct-table">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -1543,46 +1653,50 @@ try {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php
-                            $users_query = "SELECT * FROM users WHERE role IN ('student', 'registrar') AND is_archived = 0 ORDER BY role, first_name";
-                            $users_res = $mysqli->query($users_query);
-                            if ($users_res):
-                                while ($u = $users_res->fetch_assoc()):
-                                    $fullname = formatPersonNameRow($u);
-                                    if ($fullname === '') $fullname = 'N/A';
-                                    // Students carry a student number, registrars a teacher ID
-                                    $row_id = $u['role'] === 'student' ? ($u['student_id'] ?? '') : ($u['teacher_id'] ?? '');
+                            <?php foreach ($accounts as $u):
+                                $fullname = formatPersonNameRow($u);
+                                if ($fullname === '') $fullname = 'N/A';
+                                // Students carry a student number, registrars a teacher ID
+                                $row_id = $u['role'] === 'student' ? ($u['student_id'] ?? '') : ($u['teacher_id'] ?? '');
+                                [$st_label, $st_class, $st_note] = $account_status($u);
+                                $seen = $last_login[(int)$u['id']] ?? null;
+                                if ($st_label === 'Active') $st_note = $seen ? 'Last sign-in ' . $when($seen) : 'Never signed in';
+                                $can_sign_in = $st_label === 'Active';
                             ?>
                             <tr>
                                 <td data-label="ID" class="cell-student-id"><?= htmlspecialchars(formatStudentId($row_id)) ?></td>
                                 <td data-label="Name" class="cell-student-name"><?= htmlspecialchars($fullname) ?></td>
-                                <td data-label="Email"><?= htmlspecialchars($u['email']) ?></td>
-                                <td data-label="Role" style="text-transform: capitalize;"><?= htmlspecialchars($u['role']) ?></td>
+                                <td data-label="Email" class="acct-email"><?= htmlspecialchars($u['email']) ?></td>
+                                <td data-label="Role"><span class="acct-role is-<?= htmlspecialchars($u['role']) ?>"><?= htmlspecialchars(ucfirst($u['role'])) ?></span></td>
                                 <td data-label="Status">
-                                    <?php if($u['is_verified'] == 2): ?>
-                                        <span class="status-badge approved">Active</span>
-                                    <?php elseif($u['is_verified'] == 1): ?>
-                                        <span class="status-badge pending">Pending</span>
-                                    <?php else: ?>
-                                        <span class="status-badge rejected">Inactive</span>
-                                    <?php endif; ?>
+                                    <div class="acct-status">
+                                        <span class="status-badge <?= $st_class ?>"><?= $st_label ?></span>
+                                        <?php if ($st_note !== ''): ?><small<?= $seen ? ' title="' . htmlspecialchars(date('M j, Y g:i A', strtotime($seen))) . ' (PH time)"' : '' ?>><?= htmlspecialchars($st_note) ?></small><?php endif; ?>
+                                    </div>
                                 </td>
                                 <td data-label="Actions">
-                                    <form action="process_user_action.php" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to change this user\'s status?');">
-                                        <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                                        <?php if($u['is_verified'] == 2): ?>
-                                            <button type="submit" name="action" value="deactivate" class="action-btn btn-wrong" title="Deactivate User"><i class="fas fa-ban"></i></button>
-                                        <?php else: ?>
-                                            <button type="submit" name="action" value="activate" class="action-btn btn-check" title="Activate User"><i class="fas fa-check"></i></button>
-                                        <?php endif; ?>
-                                    </form>
-                                    <form action="process_user_action.php" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to ARCHIVE this user?');">
-                                        <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                                        <button type="submit" name="action" value="archive" class="action-btn" style="background:rgba(245,158,11,0.15); color:#f59e0b;" title="Archive User"><i class="fas fa-archive"></i></button>
-                                    </form>
+                                    <div class="acct-actions">
+                                        <form action="process_user_action.php" method="POST" class="acct-form"
+                                              data-confirm="<?= htmlspecialchars($can_sign_in ? "Deactivate {$fullname}? They will be signed out and cannot sign in until activated again." : "Activate {$fullname}? They will be able to sign in.") ?>">
+                                            <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                                            <?php if ($can_sign_in): ?>
+                                                <button type="submit" name="action" value="deactivate" class="acct-btn is-red" title="Deactivate account"><i class="fas fa-ban"></i><span>Deactivate</span></button>
+                                            <?php else: ?>
+                                                <button type="submit" name="action" value="activate" class="acct-btn is-green" title="<?= $st_label === 'Deactivated' ? 'Activate account' : 'Approve and activate account' ?>"><i class="fas fa-check"></i><span><?= $st_label === 'Deactivated' ? 'Activate' : 'Approve' ?></span></button>
+                                            <?php endif; ?>
+                                        </form>
+                                        <form action="process_user_action.php" method="POST" class="acct-form"
+                                              data-confirm="<?= htmlspecialchars("Move {$fullname} to the Archive? They will be signed out and cannot sign in until the account is restored.") ?>">
+                                            <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                                            <button type="submit" name="action" value="archive" class="acct-btn is-amber" title="Archive account"><i class="fas fa-archive"></i><span>Archive</span></button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
-                            <?php endwhile; endif; ?>
+                            <?php endforeach; ?>
+                            <?php if (!$accounts): ?>
+                            <tr class="acct-empty"><td colspan="6">No accounts yet.</td></tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -1590,51 +1704,62 @@ try {
 
             <!-- ARCHIVE SECTION -->
             <div id="archive-section" class="content-section">
-                <div class="card-header" style="margin-bottom: 20px;">
-                    <h2>Archived Accounts</h2>
+                <div class="card-header acct-head" style="margin-bottom: 20px;">
+                    <div>
+                        <h2>Archived Accounts</h2>
+                        <p class="acct-sub"><?= count($archived_accounts) ?> archived account<?= count($archived_accounts) === 1 ? '' : 's' ?> &middot; cannot sign in until restored</p>
+                    </div>
                 </div>
                 <div class="table-card">
-                    <table class="student-table">
+                    <table class="student-table acct-table">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Role</th>
-                                <th>Status</th>
+                                <th>Archived</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php
-                            $archived_query = "SELECT * FROM users WHERE role IN ('student', 'registrar') AND is_archived = 1 ORDER BY role, first_name";
-                            $archived_res = $mysqli->query($archived_query);
-                            if ($archived_res && $archived_res->num_rows > 0):
-                                while ($u = $archived_res->fetch_assoc()):
-                                    $fullname = formatPersonNameRow($u);
-                                    if ($fullname === '') $fullname = 'N/A';
-                                    // Students carry a student number, registrars a teacher ID
-                                    $row_id = $u['role'] === 'student' ? ($u['student_id'] ?? '') : ($u['teacher_id'] ?? '');
+                            <?php foreach ($archived_accounts as $u):
+                                $fullname = formatPersonNameRow($u);
+                                if ($fullname === '') $fullname = 'N/A';
+                                $row_id = $u['role'] === 'student' ? ($u['student_id'] ?? '') : ($u['teacher_id'] ?? '');
+                                $info = $archived_info[(int)$u['id']] ?? null;
+                                $by = '';
+                                if ($info && ($info['email'] ?? '') !== '') {
+                                    $by = $info['role'] === 'systemadmin' ? 'System Admin' : trim(($info['first_name'] ?? '') . ' ' . ($info['last_name'] ?? ''));
+                                    if ($by === '') $by = $info['email'];
+                                }
                             ?>
                             <tr>
                                 <td data-label="ID" class="cell-student-id"><?= htmlspecialchars(formatStudentId($row_id)) ?></td>
                                 <td data-label="Name" class="cell-student-name"><?= htmlspecialchars($fullname) ?></td>
-                                <td data-label="Email"><?= htmlspecialchars($u['email']) ?></td>
-                                <td data-label="Role" style="text-transform: capitalize;"><?= htmlspecialchars($u['role']) ?></td>
-                                <td data-label="Status">
-                                    <span class="status-badge" style="background:rgba(100,116,139,0.2); color:#94a3b8;"><i class="fas fa-archive"></i> Archived</span>
+                                <td data-label="Email" class="acct-email"><?= htmlspecialchars($u['email']) ?></td>
+                                <td data-label="Role"><span class="acct-role is-<?= htmlspecialchars($u['role']) ?>"><?= htmlspecialchars(ucfirst($u['role'])) ?></span></td>
+                                <td data-label="Archived">
+                                    <div class="acct-status">
+                                        <span class="status-badge muted"><i class="fas fa-archive"></i> Archived</span>
+                                        <?php if ($info): ?>
+                                            <small title="<?= htmlspecialchars(date('M j, Y g:i A', strtotime($info['created_at']))) ?> (PH time)"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($info['created_at']))) ?><?= $by !== '' ? ' &middot; by ' . htmlspecialchars($by) : '' ?></small>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                                 <td data-label="Actions">
-                                    <form action="process_user_action.php" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to RESTORE this archived user?');">
-                                        <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                                        <button type="submit" name="action" value="unarchive" class="action-btn" style="background:rgba(59,130,246,0.15); color:#3b82f6;" title="Unarchive User"><i class="fas fa-undo"></i></button>
-                                    </form>
+                                    <div class="acct-actions">
+                                        <form action="process_user_action.php" method="POST" class="acct-form"
+                                              data-confirm="<?= htmlspecialchars("Restore {$fullname}? The account returns to Account Management and can sign in again with the same e-mail.") ?>">
+                                            <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                                            <button type="submit" name="action" value="unarchive" class="acct-btn is-blue" title="Restore account"><i class="fas fa-undo"></i><span>Restore</span></button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
-                            <?php endwhile; else: ?>
-                            <tr>
-                                <td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">No archived accounts found.</td>
-                            </tr>
+                            <?php endforeach; ?>
+                            <?php if (!$archived_accounts): ?>
+                            <tr class="acct-empty"><td colspan="6"><i class="fas fa-box-open"></i> No archived accounts.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -2572,6 +2697,108 @@ try {
         document.querySelector('.sidebar').classList.remove('active');
         document.body.classList.remove('sidebar-open');
     }
+</script>
+<!-- Account action confirmation (replaces the browser's confirm(), which a browser can silence) -->
+<div class="acct-modal" id="acctModal" hidden>
+    <div class="acct-modal-box" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">
+        <div class="acct-modal-icon" id="acctModalIcon"><i class="fas fa-circle-question"></i></div>
+        <h3 id="acctModalTitle">Are you sure?</h3>
+        <p id="acctModalText"></p>
+        <div class="acct-modal-actions">
+            <button type="button" class="acct-modal-cancel" id="acctModalCancel">Cancel</button>
+            <button type="button" class="acct-modal-ok" id="acctModalOk">Confirm</button>
+        </div>
+    </div>
+</div>
+<style>
+    .acct-modal { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center;
+                  padding: 16px; background: rgba(2,6,23,0.7); }
+    .acct-modal[hidden] { display: none; }
+    .acct-modal-box { width: 100%; max-width: 400px; background: #1e293b; border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                      animation: acctPop 0.16s ease-out; }
+    @keyframes acctPop { from { transform: scale(0.95); opacity: 0; } to { transform: none; opacity: 1; } }
+    .acct-modal-icon { width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center;
+                       justify-content: center; font-size: 1.4rem; }
+    .acct-modal-box h3 { margin: 0 0 8px; font-size: 1.05rem; color: #f1f5f9; }
+    .acct-modal-box p { margin: 0 0 20px; font-size: 0.88rem; line-height: 1.5; color: #94a3b8; word-break: break-word; }
+    .acct-modal-actions { display: flex; gap: 10px; }
+    .acct-modal-actions button { flex: 1; height: 42px; border-radius: 10px; font-family: inherit; font-size: 0.88rem;
+                                 font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+    .acct-modal-cancel { background: transparent; color: #cbd5e1; border-color: rgba(255,255,255,0.15) !important; }
+    .acct-modal-cancel:hover { background: rgba(255,255,255,0.06); }
+    .acct-modal-ok { color: #fff; }
+    .acct-modal-ok:disabled { opacity: 0.7; cursor: wait; }
+    .acct-modal.is-red   .acct-modal-icon { background: rgba(239,68,68,0.15);  color: #f87171; }
+    .acct-modal.is-green .acct-modal-icon { background: rgba(16,185,129,0.15); color: #34d399; }
+    .acct-modal.is-amber .acct-modal-icon { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .acct-modal.is-blue  .acct-modal-icon { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .acct-modal.is-red   .acct-modal-ok { background: #ef4444; }
+    .acct-modal.is-green .acct-modal-ok { background: #10b981; }
+    .acct-modal.is-amber .acct-modal-ok { background: #f59e0b; color: #111827; }
+    .acct-modal.is-blue  .acct-modal-ok { background: #3b82f6; }
+    .acct-btn.is-busy { opacity: 0.6; pointer-events: none; }
+</style>
+<script>
+// Deactivate / Activate / Approve / Archive / Restore: confirm in our own modal, then post.
+(function () {
+    const modal = document.getElementById('acctModal');
+    if (!modal) return;
+    const title = document.getElementById('acctModalTitle');
+    const text = document.getElementById('acctModalText');
+    const icon = document.getElementById('acctModalIcon');
+    const ok = document.getElementById('acctModalOk');
+    const cancel = document.getElementById('acctModalCancel');
+    const TONES = {
+        deactivate: ['is-red', 'fa-ban', 'Deactivate account?', 'Deactivate'],
+        activate:   ['is-green', 'fa-check', 'Activate account?', 'Activate'],
+        archive:    ['is-amber', 'fa-archive', 'Archive account?', 'Archive'],
+        unarchive:  ['is-blue', 'fa-undo', 'Restore account?', 'Restore']
+    };
+    let pending = null;
+
+    function close() { modal.hidden = true; pending = null; }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.acct-form');
+        if (!form) return;
+        event.preventDefault();
+        const button = event.submitter || form.querySelector('button[name="action"]');
+        if (!button) return;
+        const tone = TONES[button.value] || TONES.archive;
+        const label = button.textContent.trim() || tone[3];
+        modal.className = 'acct-modal ' + tone[0];
+        icon.innerHTML = '<i class="fas ' + tone[1] + '"></i>';
+        title.textContent = label === 'Approve' ? 'Approve account?' : tone[2];
+        text.textContent = form.dataset.confirm || '';
+        ok.textContent = label;
+        ok.disabled = false;
+        pending = { form: form, button: button };
+        modal.hidden = false;
+        ok.focus();
+    });
+    ok.addEventListener('click', function () {
+        if (!pending) return;
+        const form = pending.form, button = pending.button;
+        // form.submit() leaves out the clicked button, so carry its action in a hidden field.
+        let field = form.querySelector('input[type="hidden"][name="action"]');
+        if (!field) { field = document.createElement('input'); field.type = 'hidden'; field.name = 'action'; form.appendChild(field); }
+        field.value = button.value;
+        ok.disabled = true;
+        ok.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Working...';
+        document.querySelectorAll('.acct-btn').forEach(function (b) { b.classList.add('is-busy'); });
+        form.submit();
+    });
+    cancel.addEventListener('click', close);
+    modal.addEventListener('click', function (event) { if (event.target === modal) close(); });
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !modal.hidden) close(); });
+    // Coming back with the browser's Back button must not leave the buttons disabled.
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) return;
+        document.querySelectorAll('.acct-btn.is-busy').forEach(function (b) { b.classList.remove('is-busy'); });
+        close();
+    });
+})();
 </script>
 </body>
 </html>

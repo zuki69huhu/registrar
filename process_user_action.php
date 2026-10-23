@@ -33,18 +33,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $admin_id = $_SESSION['user_id'] ?? null;
 
+    // Deactivating only switches users.is_active off, so the account keeps its
+    // verification / approval state and Activate brings it back exactly as it was.
+    // Activate also approves an account that was never approved (is_verified 0/1/3).
     if ($action === 'activate') {
-        $stmt = $mysqli->prepare("UPDATE users SET is_verified = 2 WHERE id = ?");
+        $stmt = $mysqli->prepare("UPDATE users SET is_active = 1, is_verified = 2 WHERE id = ?");
         $stmt->bind_param("i", $user_id_target);
         if ($stmt->execute()) {
             logAudit($mysqli, $admin_id, 'USER_ACTIVATED', "Activated user account {$target_user['email']}.", $user_id_target);
+            $_SESSION['flash'] = "{$target_user['email']} is now active.";
         }
         $stmt->close();
     } elseif ($action === 'deactivate') {
-        $stmt = $mysqli->prepare("UPDATE users SET is_verified = 0 WHERE id = ?"); // or 1 for pending, 0 for unverified/inactive
+        $stmt = $mysqli->prepare("UPDATE users SET is_active = 0 WHERE id = ?");
         $stmt->bind_param("i", $user_id_target);
         if ($stmt->execute()) {
             logAudit($mysqli, $admin_id, 'USER_DEACTIVATED', "Deactivated user account {$target_user['email']}.", $user_id_target);
+            $_SESSION['flash'] = "{$target_user['email']} has been deactivated and can no longer sign in.";
         }
         $stmt->close();
     } elseif ($action === 'archive') {
@@ -52,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("i", $user_id_target);
         if ($stmt->execute()) {
             logAudit($mysqli, $admin_id, 'USER_ARCHIVED', "Archived user account {$target_user['email']}.", $user_id_target);
+            $_SESSION['flash'] = "{$target_user['email']} has been moved to the Archive.";
         }
         $stmt->close();
     } elseif ($action === 'unarchive') {
@@ -59,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("i", $user_id_target);
         if ($stmt->execute()) {
             logAudit($mysqli, $admin_id, 'USER_UNARCHIVED', "Unarchived user account {$target_user['email']}.", $user_id_target);
+            $_SESSION['flash'] = "{$target_user['email']} has been restored.";
         }
         $stmt->close();
     }

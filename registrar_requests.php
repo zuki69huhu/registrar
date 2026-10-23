@@ -202,7 +202,7 @@ foreach ($requests as $r) {
         'formTitle'     => $r['form_title'],
         'studentName'   => formatPersonNameRow($r),
         'studentId'     => formatStudentId($r['student_id']),
-        'submittedAt'   => date('M j, Y 	 g:i A', strtotime($r['submitted_at'])),
+        'submittedAt'   => date('M j, Y \a\t g:i A', strtotime($r['submitted_at'])),
         'claimDate'     => !empty($r['claim_at']) ? date('Y-m-d', strtotime($r['claim_at'])) : '',
         'claimTime'     => !empty($r['claim_at']) ? date('H:i', strtotime($r['claim_at'])) : '09:00',
         'claimLocation' => $r['claim_location'] ?: REQUEST_DEFAULT_CLAIM_LOCATION,
