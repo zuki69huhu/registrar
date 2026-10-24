@@ -48,6 +48,11 @@
             clear.forEach(function (old) {
                 if (old) localStorage.removeItem(old.trim());
             });
+            // Set by process_login.php: a fresh sign-in starts in the page's base mode.
+            if (document.cookie.indexOf('theme_reset=' + key) !== -1) {
+                localStorage.removeItem(key);
+                document.cookie = 'theme_reset=; Max-Age=0; path=/';
+            }
             return valid(localStorage.getItem(key));
         } catch (error) {
             return base;

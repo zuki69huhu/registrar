@@ -192,7 +192,7 @@ foreach ($requests as $r) {
 //    request_form_view.php when View is opened, so none of it is embedded here.
 $modal_data = [];
 foreach ($requests as $r) {
-    $meta = requestStatusMeta($r['status']);
+    $meta = requestStatusMeta($r['status'], $r);
     $modal_data[$r['id']] = [
         'id'            => (int)$r['id'],
         'ref'           => '#' . str_pad($r['id'], 5, '0', STR_PAD_LEFT),
@@ -206,6 +206,9 @@ foreach ($requests as $r) {
         'claimDate'     => !empty($r['claim_at']) ? date('Y-m-d', strtotime($r['claim_at'])) : '',
         'claimTime'     => !empty($r['claim_at']) ? date('H:i', strtotime($r['claim_at'])) : '09:00',
         'claimLocation' => $r['claim_location'] ?: REQUEST_DEFAULT_CLAIM_LOCATION,
+        // The proof of payment the student uploaded; approval waits for it.
+        'payment'       => $r['payment_proof'] ?? '',
+        'paymentAt'     => !empty($r['payment_uploaded_at']) ? date('M j, Y \a\t g:i A', strtotime($r['payment_uploaded_at'])) : '',
     ];
 }
 
@@ -235,8 +238,8 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
-    <link rel="stylesheet" href="theme_mode.css?v=9">
+    <script src="theme_mode.js?v=4" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=11">
     <title>Document Requests - Registrar Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -323,7 +326,11 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
 
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 
-        .row-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+        .row-actions { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+        .btn-proof { background: rgba(249,115,22,0.14); color: #fdba74; border: 1px solid rgba(249,115,22,0.4); text-decoration: none; }
+        .btn-proof:hover { background: #f97316; color: #fff; }
+        .pay-wait { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
+                    color: #fdba74; background: rgba(249,115,22,0.1); border: 1px dashed rgba(249,115,22,0.45); white-space: nowrap; }
         .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border-radius: 8px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
         .btn:hover { filter: brightness(1.15); }
         .btn-view { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
@@ -586,7 +593,7 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
                             </thead>
                             <tbody>
                             <?php foreach ($requests as $r):
-                                $m = requestStatusMeta($r['status']);
+                                $m = requestStatusMeta($r['status'], $r);
                                 $is_today = $r['status'] === 'approved' && !empty($r['claim_at']) && date('Y-m-d', strtotime($r['claim_at'])) === date('Y-m-d');
                             ?>
                                 <tr>
@@ -632,7 +639,11 @@ $filters_on = ($status_filter !== 'pending') || ($form_filter !== 'all') || ($se
                                     <td data-label="Actions">
                                         <div class="row-actions">
                                             <button class="btn btn-view" onclick="openView(<?= (int)$r['id'] ?>)"><i class="fas fa-eye"></i> View</button>
-                                            <?php if ($r['status'] === 'pending'): ?>
+                                            <?php if ($r['status'] === 'pending' && empty($r['payment_proof'])): ?>
+                                                <span class="pay-wait" title="The student has not uploaded a proof of payment yet, so the request cannot be approved."><i class="fas fa-receipt"></i> No payment yet</span>
+                                                <button class="btn btn-reject" onclick="openReject(<?= (int)$r['id'] ?>)"><i class="fas fa-xmark"></i> Reject</button>
+                                            <?php elseif ($r['status'] === 'pending'): ?>
+                                                <a class="btn btn-proof" href="<?= htmlspecialchars($r['payment_proof']) ?>" target="_blank" rel="noopener" title="Proof of payment uploaded <?= !empty($r['payment_uploaded_at']) ? date('M j, Y g:i A', strtotime($r['payment_uploaded_at'])) : '' ?>"><i class="fas fa-receipt"></i> Proof</a>
                                                 <button class="btn btn-approve" onclick="openApprove(<?= (int)$r['id'] ?>, 'approve')"><i class="fas fa-check"></i> Approve</button>
                                                 <button class="btn btn-reject" onclick="openReject(<?= (int)$r['id'] ?>)"><i class="fas fa-xmark"></i> Reject</button>
                                             <?php elseif ($r['status'] === 'approved'): ?>
@@ -791,8 +802,10 @@ function openView(id) {
 
     const actions = [];
     if (r.status === 'pending') {
+        if (r.payment) actions.push({ label: ' Proof of payment', icon: 'fa-receipt', onClick: () => window.open(r.payment, '_blank', 'noopener') });
         actions.push({ label: ' Reject', icon: 'fa-xmark', className: 'rv-btn-reject', onClick: () => openReject(r.id) });
-        actions.push({ label: ' Approve & set schedule', icon: 'fa-check', className: 'rv-btn-approve', onClick: () => openApprove(r.id, 'approve') });
+        // Approval waits for the student's proof of payment (process_request_status.php checks it too).
+        if (r.payment) actions.push({ label: ' Approve & set schedule', icon: 'fa-check', className: 'rv-btn-approve', onClick: () => openApprove(r.id, 'approve') });
     } else if (r.status === 'approved') {
         actions.push({ label: ' Reschedule', icon: 'fa-calendar-day', onClick: () => openApprove(r.id, 'reschedule') });
         actions.push({ label: ' Mark as claimed', icon: 'fa-hand-holding-heart', className: 'rv-btn-claim', onClick: () => openClaim(r.id) });

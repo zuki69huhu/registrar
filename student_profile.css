@@ -550,34 +550,289 @@ html[data-theme-base="dark"] .sp-skel-block {
 .pf-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .pf-done-actions .pf-btn { flex: 1 1 140px; }
 @media (prefers-reduced-motion: reduce) { .pf-done-card { animation: none; } }
-
-/* Registrar: the profile as an Excel file (export_student_profiles.php?id=N). */
-.sp-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
-.sp-excel {
-    display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px;
-    background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
-    font: 600 13px 'Inter', sans-serif; text-decoration: none;
-}
-.sp-excel:hover { background: #059669; color: #fff; border-color: #059669; }
-html[data-theme-base="dark"] .sp-excel { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); }
-html[data-theme-base="dark"] .sp-excel:hover { background: #10b981; color: #fff; border-color: #10b981; }
-@media (max-width: 560px) { .sp-actions .sp-excel { flex: 1; justify-content: center; } }
-
-/* ── Change Password (student_settings.php) ── */
-.pw-sub { margin: -4px 0 16px; font-size: 13px; color: #64748b; }
-.pw-form { max-width: 560px; }
-.pw-row { margin-bottom: 14px; }
-.pw-field { position: relative; }
-.pw-field .form-input { padding-right: 46px; }
-.pw-eye {
-    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
-    width: 36px; height: 36px; border: none; border-radius: 8px;
-    background: transparent; color: #64748b; cursor: pointer;
-}
-.pw-eye:hover { background: #f1f5f9; color: #0f172a; }
-.pw-match { display: block; min-height: 16px; margin: -4px 0 4px; }
-@media (max-width: 560px) {
-    .pw-form { max-width: none; }
-    .pw-field .form-input { font-size: 16px; }
-    .pw-form .pf-actions .pf-btn { flex: 1 1 100%; }
-}
+
+
+/* ── Registrar: what can be done with the profile ────────────────────────────
+   Edit Profile, Download PDF (download_student_profile_pdf.php), Download as
+   Excel (export_student_profiles.php) and Download Photo. */
+.sp-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.sp-act {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 9px 16px; border-radius: 10px; border: 1px solid transparent;
+    font: 600 13px 'Inter', sans-serif; text-decoration: none; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.sp-act.is-edit { background: var(--primary-color, #1a365d); color: #ffffff; margin-right: auto; }
+.sp-act.is-edit:hover { filter: brightness(1.1); }
+.sp-act.is-pdf { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.sp-act.is-pdf:hover { background: #dc2626; color: #ffffff; border-color: #dc2626; }
+.sp-excel { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.sp-excel:hover { background: #059669; color: #fff; border-color: #059669; }
+.sp-act.is-photo { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.sp-act.is-photo:hover { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+html[data-theme-base="dark"] .sp-act.is-edit { background: var(--accent-gold, #c9a227); color: #0f172a; }
+html[data-theme-base="dark"] .sp-act.is-pdf { background: rgba(239, 68, 68, 0.14); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
+html[data-theme-base="dark"] .sp-act.is-pdf:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+html[data-theme-base="dark"] .sp-excel { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); }
+html[data-theme-base="dark"] .sp-excel:hover { background: #10b981; color: #fff; border-color: #10b981; }
+html[data-theme-base="dark"] .sp-act.is-photo { background: rgba(59, 130, 246, 0.14); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); }
+html[data-theme-base="dark"] .sp-act.is-photo:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+@media (max-width: 720px) {
+    .sp-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .sp-act.is-edit { grid-column: 1 / -1; margin-right: 0; padding: 12px 16px; font-size: 14px; }
+    .sp-act { padding: 11px 10px; }
+}
+
+/* "Changes saved", over the profile after a registrar's save. */
+.sp-saved {
+    display: flex; align-items: center; gap: 10px; padding: 11px 14px; margin-bottom: 16px;
+    border-radius: 10px; background: #dcfce7; color: #166534; font-size: 13.5px; font-weight: 600;
+    animation: sp-in 0.2s ease-out;
+}
+html[data-theme-base="dark"] .sp-saved { background: #0f2a1d; color: #86efac; border: 1px solid #166534; }
+
+/* ── The picture: a button in the profile, then large in the modal ─────────── */
+.sp-photo-btn {
+    position: relative; flex-shrink: 0; padding: 0; border: none; background: none;
+    border-radius: 50%; cursor: zoom-in; line-height: 0;
+}
+.sp-photo-btn:focus-visible { outline: 3px solid var(--primary-color, #1a365d); outline-offset: 3px; }
+.sp-photo-btn .sp-photo { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.sp-photo-btn:hover .sp-photo { transform: scale(1.04); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25); }
+.sp-photo-zoom {
+    position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--primary-color, #1a365d); color: #ffffff; font-size: 12px;
+    border: 2px solid #ffffff; line-height: 1;
+}
+html[data-theme-base="dark"] .sp-photo-btn:focus-visible { outline-color: var(--accent-gold, #c9a227); }
+html[data-theme-base="dark"] .sp-photo-zoom { background: var(--accent-gold, #c9a227); color: #0f172a; border-color: #0f172a; }
+
+.sp-lightbox {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column;
+    background: rgba(2, 6, 23, 0.94);
+    animation: sp-fade 0.15s ease-out;
+}
+.sp-lightbox[hidden] { display: none; }
+@keyframes sp-fade { from { opacity: 0; } to { opacity: 1; } }
+.sp-lb-bar {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+    color: #f1f5f9;
+}
+.sp-lb-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-lb-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0;
+    height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.1); color: #ffffff;
+    font: 600 13.5px 'Inter', sans-serif; text-decoration: none; cursor: pointer;
+}
+.sp-lb-btn:hover { background: rgba(255, 255, 255, 0.22); }
+.sp-lb-btn.is-close { width: 40px; padding: 0; font-size: 26px; line-height: 1; }
+.sp-lb-stage {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+    padding: 8px 16px; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    cursor: zoom-out;
+}
+.sp-lb-img {
+    max-width: 100%; max-height: 100%; object-fit: contain;
+    border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    background: #1e293b; cursor: zoom-in; image-orientation: from-image;
+}
+/* Clicked: the picture at its own size, scrolled like the document viewer. */
+.sp-lightbox.is-actual .sp-lb-stage { align-items: flex-start; justify-content: flex-start; }
+.sp-lightbox.is-actual .sp-lb-img { max-width: none; max-height: none; margin: auto; cursor: zoom-out; }
+.sp-lb-hint {
+    flex-shrink: 0; padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    text-align: center; font-size: 12px; color: #94a3b8;
+}
+@media (max-width: 560px) {
+    .sp-lb-btn span { display: none; }          /* the icon alone on a phone */
+    .sp-lb-btn { padding: 0 13px; }
+    .sp-lb-stage { padding: 4px 8px; }
+}
+
+/* ── Registrar: Edit Profile inside the modal ──────────────────────────────── */
+.sp.is-editing .sp-panel { max-width: 1000px; }
+.sp-discard {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    padding: 10px 16px 10px 22px; flex-shrink: 0;
+    background: #fffbeb; color: #92400e; border-bottom: 1px solid #fde68a; font-size: 13.5px; font-weight: 600;
+}
+.sp-discard[hidden] { display: none; }
+.sp-discard i { margin-right: 6px; }
+.sp-discard-actions { display: flex; gap: 8px; }
+.sp-discard .pf-btn { padding: 8px 14px; font-size: 13px; }
+.pf-btn.is-danger { background: #dc2626; color: #ffffff; }
+.pf-btn.is-danger:hover { background: #b91c1c; }
+.pf-btn:disabled { opacity: 0.7; cursor: progress; }
+
+.sp-form-note {
+    display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; margin-bottom: 18px;
+    border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: 13.5px; line-height: 1.5;
+}
+.sp-form-note i { margin-top: 3px; }
+.sp-form-errors:focus { outline: none; }
+.sp-form .form-grid-3,
+.sp-form .form-grid-2 { display: grid; gap: 16px 20px; margin-bottom: 18px; }
+.sp-form .form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sp-form .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sp-form .form-label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; color: #475569; }
+.sp-form .pf-place-label { font-size: 12px; margin-bottom: 5px; }
+.sp-form .form-input,
+.sp-form .form-select {
+    width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;
+    background-color: #ffffff; color: #0f172a; font: 14px 'Inter', sans-serif;
+}
+.sp-form .form-input:focus,
+.sp-form .form-select:focus { outline: none; border-color: var(--primary-color, #1a365d); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+.sp-form .form-select {
+    appearance: none; -webkit-appearance: none; padding-right: 32px;
+    background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
+    text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+}
+.sp-form .form-input:invalid:not(:placeholder-shown) { border-color: #f87171; }
+.sp-form input[type="file"] {
+    width: 100%; padding: 8px; border: 2px dashed #cbd5e1; border-radius: 8px;
+    background: #f8fafc; color: #475569; font: 13px 'Inter', sans-serif; cursor: pointer;
+}
+.sp-form input[type="file"]::file-selector-button {
+    margin-right: 10px; padding: 6px 12px; border: none; border-radius: 6px;
+    background: var(--primary-color, #1a365d); color: #ffffff; font: 600 12px 'Inter', sans-serif; cursor: pointer;
+}
+/* Cancel and Save stay in reach at the foot of the modal however long the form is. */
+.sp-form-bar {
+    position: sticky; bottom: -22px; z-index: 1;
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin: 18px -22px -22px; padding: 14px 22px;
+    background: #ffffff; border-top: 1px solid #e2e8f0;
+}
+.sp-form-bar .pf-btn { padding: 11px 20px; }
+
+html[data-theme-base="dark"] .sp-discard { background: #3a2a06; color: #fcd34d; border-bottom-color: #78350f; }
+html[data-theme-base="dark"] .sp-discard .pf-btn.is-ghost { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+html[data-theme-base="dark"] .sp-form-note { background: rgba(59, 130, 246, 0.12); color: #bfdbfe; }
+html[data-theme-base="dark"] .sp-form .pf-section { border-top-color: #334155; }
+html[data-theme-base="dark"] .sp-form .pf-section h4 { color: #f1f5f9; }
+html[data-theme-base="dark"] .sp-form .pf-section h4 i { color: var(--accent-gold, #c9a227); }
+html[data-theme-base="dark"] .sp-form .pf-section p,
+html[data-theme-base="dark"] .sp-form .pf-hint,
+html[data-theme-base="dark"] .sp-form .pf-place-label { color: #94a3b8; }
+html[data-theme-base="dark"] .sp-form .pf-legacy { color: #fbbf24; }
+html[data-theme-base="dark"] .sp-form .form-label { color: #cbd5e1; }
+html[data-theme-base="dark"] .sp-form .form-input,
+html[data-theme-base="dark"] .sp-form .form-select,
+html[data-theme-base="dark"] .sp-form .pf-edu .form-input { background-color: #0f172a; border-color: #475569; color: #f1f5f9; }
+html[data-theme-base="dark"] .sp-form .form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+html[data-theme-base="dark"] .sp-form .form-input::placeholder { color: #64748b; }
+html[data-theme-base="dark"] .sp-form .form-input:focus,
+html[data-theme-base="dark"] .sp-form .form-select:focus { border-color: var(--accent-gold, #c9a227); box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.2); }
+html[data-theme-base="dark"] .sp-form .pf-readonly { background-color: #1e293b; color: #94a3b8; border-color: #334155; }
+html[data-theme-base="dark"] .sp-form input[type="file"] { background: #0f172a; border-color: #475569; color: #cbd5e1; }
+html[data-theme-base="dark"] .sp-form input[type="file"]::file-selector-button,
+html[data-theme-base="dark"] .sp-form .pf-btn.is-primary { background: var(--accent-gold, #c9a227); color: #0f172a; }
+html[data-theme-base="dark"] .sp-form .pf-btn.is-ghost { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+html[data-theme-base="dark"] .sp-form .pf-btn.is-ghost:hover { background: #334155; }
+html[data-theme-base="dark"] .sp-form .pf-edu { background: #0f172a; border-color: #334155; }
+html[data-theme-base="dark"] .sp-form .pf-edu-title { color: #e2e8f0; }
+html[data-theme-base="dark"] .sp-form .pf-edu-title small { color: #64748b; }
+html[data-theme-base="dark"] .sp-form .pf-copy-place { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+html[data-theme-base="dark"] .sp-form .pf-copy-place:hover { background: #334155; }
+html[data-theme-base="dark"] .sp-form .pf-copy-place.is-done { background: #0f2a1d; color: #86efac; border-color: #166534; }
+html[data-theme-base="dark"] .sp-form .pf-flash.is-error { background: #3b1218; color: #fca5a5; border: 1px solid #7f1d1d; }
+html[data-theme-base="dark"] .sp-form-bar { background: #1e293b; border-top-color: #334155; }
+
+@media (max-width: 900px) {
+    .sp-form .form-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sp-form .form-grid-3 > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+    .sp-form .form-grid-3,
+    .sp-form .form-grid-2 { grid-template-columns: 1fr; gap: 14px; }
+    /* 16px stops iOS zooming the page when a field is focused. */
+    .sp-form .form-input, .sp-form .form-select { font-size: 16px; }
+    .sp-form-bar { bottom: calc(-20px - env(safe-area-inset-bottom, 0px));
+                   margin: 16px -16px calc(-20px - env(safe-area-inset-bottom, 0px));
+                   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+    .sp-form-bar .pf-btn { flex: 1; }
+    .sp-discard { padding: 10px 16px; }
+    .sp-discard-actions { width: 100%; }
+    .sp-discard-actions .pf-btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sp-lightbox, .sp-saved, .sp-photo-btn .sp-photo { animation: none; transition: none; }
+}
+
+/* ── Profile picture: formal photo guidelines (profile_form.php) ──────────── */
+.pf-photo { display: flex; gap: 20px; align-items: flex-start; padding: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc; }
+.pf-photo-preview { flex-shrink: 0; width: 120px; height: 120px; border-radius: 12px; overflow: hidden; background: #ffffff; border: 2px solid #e2e8f0; }
+.pf-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf-photo-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #94a3b8; font-size: 34px; }
+.pf-photo-empty small { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.pf-photo-body { flex: 1; min-width: 0; }
+.pf-photo-rules { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: 12.5px; color: #475569; line-height: 1.45; }
+.pf-photo-rules li { display: flex; gap: 8px; }
+.pf-photo-rules i { width: 14px; margin-top: 2px; color: var(--primary-color, #1a365d); flex-shrink: 0; text-align: center; }
+.pf-photo-confirm { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; color: #78350f; font-size: 13px; line-height: 1.45; cursor: pointer; }
+.pf-photo-confirm[hidden] { display: none; }
+.pf-photo-confirm input { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; accent-color: var(--primary-color, #1a365d); }
+html[data-theme-base="dark"] .sp-form .pf-photo { background: #0f172a; border-color: #334155; }
+html[data-theme-base="dark"] .sp-form .pf-photo-preview { background: #1e293b; border-color: #334155; }
+html[data-theme-base="dark"] .sp-form .pf-photo-rules { color: #cbd5e1; }
+html[data-theme-base="dark"] .sp-form .pf-photo-rules i { color: var(--accent-gold, #c9a227); }
+@media (max-width: 720px) {
+    .pf-photo { flex-direction: column; align-items: center; text-align: left; }
+    .pf-photo-body { width: 100%; }
+    .pf-photo-rules { grid-template-columns: 1fr; }
+}
+
+/* Edit Profile header: view and download my profile */
+.pf-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-head-actions .pf-btn { padding: 8px 14px; font-size: 13px; text-decoration: none; }
+.pf-dl.is-pdf i { color: #dc2626; }
+.pf-dl.is-xls i { color: #059669; }
+@media (max-width: 560px) {
+    .pf-head-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+    .pf-head-actions [data-open-profile] { grid-column: 1 / -1; }
+    .pf-head-actions .pf-btn { padding: 11px 12px; }
+}
+
+/* ── Change Password (student_settings.php) ── */
+
+.pw-sub { margin: -4px 0 16px; font-size: 13px; color: #64748b; }
+
+.pw-form { max-width: 560px; }
+
+.pw-row { margin-bottom: 14px; }
+
+.pw-field { position: relative; }
+
+.pw-field .form-input { padding-right: 46px; }
+
+.pw-eye {
+
+    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+
+    width: 36px; height: 36px; border: none; border-radius: 8px;
+
+    background: transparent; color: #64748b; cursor: pointer;
+
+}
+
+.pw-eye:hover { background: #f1f5f9; color: #0f172a; }
+
+.pw-match { display: block; min-height: 16px; margin: -4px 0 4px; }
+
+@media (max-width: 560px) {
+
+    .pw-form { max-width: none; }
+
+    .pw-field .form-input { font-size: 16px; }
+
+    .pw-form .pf-actions .pf-btn { flex: 1 1 100%; }
+
+}
+

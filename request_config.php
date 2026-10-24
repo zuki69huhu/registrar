@@ -70,6 +70,26 @@ try {
     error_log('student_requests table setup failed: ' . $e->getMessage());
 }
 
+// Proof of payment: a filed request only reaches the registrar once the student
+// has uploaded it (process_student_request.php, action "payment").
+try {
+    $res = $mysqli->query("SHOW COLUMNS FROM student_requests LIKE 'payment_proof'");
+    if ($res && $res->num_rows === 0) {
+        $mysqli->query("ALTER TABLE student_requests ADD COLUMN payment_proof VARCHAR(255) NULL AFTER student_note,
+                                                     ADD COLUMN payment_uploaded_at DATETIME NULL AFTER payment_proof");
+    }
+} catch (Exception $e) {
+    error_log('student_requests payment columns failed: ' . $e->getMessage());
+}
+
+define('REQUEST_PAYMENT_MAX_BYTES', 10 * 1024 * 1024);
+define('REQUEST_PAYMENT_TYPES', ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf']);
+
+/** True when the request is pending but its proof of payment is not uploaded yet. */
+function requestAwaitingPayment($request) {
+    return is_array($request) && ($request['status'] ?? '') === 'pending' && empty($request['payment_proof']);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Which forms an institution offers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -452,8 +472,9 @@ function getForm007Sections() {
             'title' => 'Request Details',
             'icon'  => 'fa-clipboard-check',
             'note'  => 'These are the boxes ticked at the bottom of the letter.',
+            // First / Second Request is not asked: process_student_request.php
+            // works it out, and only the registrar's copy of the sheet shows it.
             'fields' => [
-                ['name' => 'request_type',      'label' => 'Which request is this?', 'type' => 'select', 'required' => true, 'span' => 1, 'options' => ['First Request', 'Second Request']],
                 ['name' => 'urgent',            'label' => 'Urgent',                 'type' => 'checkbox', 'span' => 1],
                 ['name' => 'entrust_to_bearer', 'label' => 'Please entrust to bearer', 'type' => 'checkbox', 'span' => 1],
             ],
@@ -569,7 +590,10 @@ function requestAutofillData($user, $profile, $form_type) {
     return $data;
 }
 
-function requestStatusMeta($status) {
+function requestStatusMeta($status, $request = null) {
+    if ($status === 'pending' && $request !== null && requestAwaitingPayment($request)) {
+        return ['label' => 'Awaiting payment', 'student' => 'Upload proof of payment', 'color' => '#f97316', 'icon' => 'fa-receipt'];
+    }
     $map = [
         'pending'   => ['label' => 'Pending',        'student' => 'Waiting for registrar review', 'color' => '#f59e0b', 'icon' => 'fa-hourglass-half'],
         'approved'  => ['label' => 'Ready for claim', 'student' => 'Approved — ready for claim',  'color' => '#10b981', 'icon' => 'fa-circle-check'],
@@ -635,7 +659,7 @@ function pendingRequestCount($mysqli) {
 
         if (!empty($institution)) {
             $stmt = $mysqli->prepare("SELECT COUNT(*) AS c FROM student_requests r JOIN users u ON r.user_id = u.id
-                                      WHERE r.status = 'pending' AND u.institution = ?");
+                                      WHERE r.status = 'pending' AND r.payment_proof IS NOT NULL AND u.institution = ?");
             if (!$stmt) return 0;
             $stmt->bind_param("s", $institution);
             $stmt->execute();
@@ -644,7 +668,7 @@ function pendingRequestCount($mysqli) {
             return $count;
         }
 
-        $res = $mysqli->query("SELECT COUNT(*) AS c FROM student_requests WHERE status = 'pending'");
+        $res = $mysqli->query("SELECT COUNT(*) AS c FROM student_requests WHERE status = 'pending' AND payment_proof IS NOT NULL");
         return $res ? (int)($res->fetch_assoc()['c'] ?? 0) : 0;
     } catch (Exception $e) {
         return 0;

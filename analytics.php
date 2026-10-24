@@ -243,8 +243,8 @@ if (!empty($user_institution)) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="theme_mode.js?v=3" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
-    <link rel="stylesheet" href="theme_mode.css?v=9">
+    <script src="theme_mode.js?v=4" data-key="registrar-theme" data-base="dark" data-clear="registrar-theme-color,registrar-bg-color,registrar-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=11">
     <title>Analytics - School Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -848,8 +848,8 @@ if (!empty($user_institution)) {
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="student_profile.css?v=11">
-    <script src="student_profile.js?v=3" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=15">
+    <script src="student_profile.js?v=5" defer></script>
 </head>
 <body>
     <!-- Mobile Top Bar -->

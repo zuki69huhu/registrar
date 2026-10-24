@@ -116,6 +116,9 @@ if ($user && password_verify($password, $user['password'])) {
             header("Location: registrar_dashboard.php");
             break;
         default:
+            // Every student sign-in starts in light mode: theme_mode.js sees this
+            // one-time cookie, forgets the saved mode and deletes the cookie.
+            setcookie('theme_reset', 'student-theme', 0, '/');
             header("Location: student_dashboard.php");
             break;
     }

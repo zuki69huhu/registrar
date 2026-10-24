@@ -110,6 +110,8 @@ $user_data['full_name'] = $full_name;
 // The Student Profile (Settings > Edit Profile): birth date, sex, civil status
 // and the schools attended fill the matching fields of every form.
 $student_profile = decodeStudentProfile($user_data['profile_data'] ?? '');
+// A request can only be filed once the profile is complete (process_student_request.php checks it too).
+$profile_missing = profileMissingFields($user_data, $student_profile);
 
 /** Prefer what the portal knows about the student, then what they typed last time. */
 function prefillValue($field, $user_data, $last_form_data) {
@@ -149,8 +151,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="theme_mode.js?v=3" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
-    <link rel="stylesheet" href="theme_mode.css?v=9">
+    <script src="theme_mode.js?v=4" data-key="student-theme" data-base="light" data-clear="student-theme-color,student-bg-color,student-sidebar-bg"></script>
+    <link rel="stylesheet" href="theme_mode.css?v=11">
     <title>Requests - Student Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -254,6 +256,49 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
         }
         .summary-row:hover { border-color: var(--primary-color); background: white; box-shadow: 0 6px 16px rgba(15,23,42,0.07); }
         .summary-row.is-open { border-color: var(--primary-color); background: white; }
+        /* The payment button sits beside the request it belongs to. */
+        .summary-item { display: flex; gap: 8px; align-items: stretch; }
+        .summary-item .summary-row { flex: 1; min-width: 0; }
+        .pay-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; padding: 0 16px; border: none; border-radius: 14px;
+                   background: #f97316; color: #fff; font: 700 13px 'Inter', sans-serif; cursor: pointer; box-shadow: 0 6px 16px rgba(249,115,22,0.28);
+                   animation: payPulse 2.4s ease-in-out infinite; }
+        .pay-btn:hover { background: #ea580c; }
+        @keyframes payPulse { 0%, 100% { box-shadow: 0 6px 16px rgba(249,115,22,0.28); } 50% { box-shadow: 0 6px 22px rgba(249,115,22,0.5); } }
+        .pay-done { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 0 14px; border-radius: 14px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 12.5px; font-weight: 700; }
+        .pay-panel { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 16px; margin: 18px 0 14px; border-radius: 14px; background: #ecfdf5; border: 1px solid #a7f3d0; }
+        .pay-panel.is-due { background: #fff7ed; border-color: #fed7aa; }
+        .pay-panel-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #d1fae5; color: #059669; }
+        .pay-panel.is-due .pay-panel-icon { background: #ffedd5; color: #ea580c; }
+        .pay-panel-text { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #475569; line-height: 1.5; }
+        .pay-panel-text strong { font-size: 14.5px; color: #0f172a; }
+        .missing-list { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 620px; margin: 0 auto 18px; padding: 0; }
+        .missing-list li { padding: 4px 10px; border-radius: 999px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 12.5px; font-weight: 600; }
+
+        /* Upload proof of payment */
+        .pay-modal { position: fixed; inset: 0; z-index: 2100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .pay-modal[hidden] { display: none; }
+        .pay-modal-backdrop { position: absolute; inset: 0; background: rgba(15,23,42,0.6); }
+        .pay-modal-card { position: relative; width: 100%; max-width: 480px; max-height: 94vh; overflow-y: auto; background: #fff; border-radius: 20px; padding: 24px; box-shadow: 0 24px 60px rgba(15,23,42,0.3); animation: payIn .18s ease-out; }
+        @keyframes payIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        .pay-modal-card h3 { font-size: 18px; margin-bottom: 4px; }
+        .pay-modal-sub { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+        .pay-modal-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border: none; border-radius: 10px; background: #f1f5f9; color: #475569; font-size: 22px; line-height: 1; cursor: pointer; }
+        .pay-rules { margin: 0 0 16px; padding: 12px 14px 12px 32px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 12.5px; color: #475569; line-height: 1.6; }
+        .pay-drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 14px; border: 2px dashed #cbd5e1; border-radius: 14px; background: #f8fafc; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+        .pay-drop:hover, .pay-drop.is-over { border-color: var(--primary-color); background: #eff6ff; }
+        .pay-drop i { font-size: 26px; color: var(--primary-color); }
+        .pay-drop strong { font-size: 14px; color: #0f172a; }
+        .pay-drop small { font-size: 12px; color: #64748b; }
+        .pay-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        .pay-file { display: none; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #f1f5f9; font-size: 13px; }
+        .pay-file.is-shown { display: flex; }
+        .pay-file img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+        .pay-file .pay-file-pdf { width: 46px; height: 46px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #fee2e2; color: #dc2626; font-size: 20px; }
+        .pay-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #0f172a; }
+        .pay-error { margin-top: 10px; font-size: 12.5px; color: #b91c1c; }
+        .pay-error[hidden] { display: none; }
+        .pay-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .pay-actions .btn { flex: 1; justify-content: center; }
         .summary-row-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
         .summary-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
         .summary-row-title { font-size: 14.5px; font-weight: 700; color: #0f172a; line-height: 1.35; }
@@ -400,6 +445,11 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
             .summary-row-icon { order: 1; }
             .summary-row-chev { order: 1; margin-left: auto; }
             .summary-row .status-badge { order: 3; }
+            .summary-item { flex-direction: column; }
+            .pay-btn, .pay-done { padding: 12px 16px; justify-content: center; }
+            .pay-modal { padding: 0; align-items: flex-end; }
+            .pay-modal-card { max-width: none; border-radius: 20px 20px 0 0; padding: 22px 18px calc(18px + env(safe-area-inset-bottom, 0px)); }
+            .pay-actions { flex-direction: column-reverse; }
             /* On a phone the receipt rises from the bottom and its buttons stack. */
             .receipt { padding: 0; align-items: flex-end; }
             .receipt-dialog { max-width: none; border-radius: 22px 22px 0 0; padding: 30px 20px 22px; max-height: 92vh; transform: translateY(24px); }
@@ -450,8 +500,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
     <link rel="stylesheet" href="mobile_fixes.css?v=1">
     <link rel="stylesheet" href="ui_dialog.css?v=1">
     <script src="ui_dialog.js?v=1" defer></script>
-    <link rel="stylesheet" href="student_profile.css?v=11">
-    <script src="student_profile.js?v=3" defer></script>
+    <link rel="stylesheet" href="student_profile.css?v=15">
+    <script src="student_profile.js?v=5" defer></script>
 </head>
 <body class="student-shell">
     <header class="mobile-appbar">
@@ -537,9 +587,11 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 
             <div class="summary-list">
                 <?php foreach ($open_by_form as $ft => $r):
-                    $m = requestStatusMeta($r['status']);
+                    $m = requestStatusMeta($r['status'], $r);
                     $icon = $available_forms[$ft]['icon'] ?? 'fa-file-lines';
+                    $needs_payment = requestAwaitingPayment($r);
                 ?>
+                <div class="summary-item">
                 <button type="button" class="summary-row" data-target="tracker-<?= htmlspecialchars($ft) ?>"
                         aria-expanded="false" aria-controls="tracker-<?= htmlspecialchars($ft) ?>">
                     <span class="summary-row-icon" style="background: <?= $m['color'] ?>1a; color: <?= $m['color'] ?>;">
@@ -560,6 +612,15 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
                     </span>
                     <span class="summary-row-chev"><i class="fas fa-chevron-down"></i></span>
                 </button>
+                <?php if ($needs_payment): ?>
+                    <button type="button" class="pay-btn" data-pay-open data-request-id="<?= (int)$r['id'] ?>"
+                            data-request-title="<?= htmlspecialchars($r['form_title']) ?> #<?= str_pad($r['id'], 5, '0', STR_PAD_LEFT) ?>">
+                        <i class="fas fa-upload"></i> <span>Upload proof of payment</span>
+                    </button>
+                <?php elseif ($r['status'] === 'pending'): ?>
+                    <span class="pay-done" title="Proof of payment sent <?= date('M j, Y g:i A', strtotime($r['payment_uploaded_at'])) ?>"><i class="fas fa-circle-check"></i> Payment sent</span>
+                <?php endif; ?>
+                </div>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -567,7 +628,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 
         <?php
         foreach ($open_by_form as $open_form_type => $active_request):
-            $meta = requestStatusMeta($active_request['status']);
+            $meta = requestStatusMeta($active_request['status'], $active_request);
             $is_approved = $active_request['status'] === 'approved';
             $reviewer = trim(($active_request['reviewer_first'] ?? '') . ' ' . ($active_request['reviewer_last'] ?? ''));
         ?>
@@ -655,8 +716,34 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
                     </a>
                 </div>
             <?php else: ?>
+                <?php if (requestAwaitingPayment($active_request)): ?>
+                    <div class="pay-panel is-due">
+                        <div class="pay-panel-icon"><i class="fas fa-receipt"></i></div>
+                        <div class="pay-panel-text">
+                            <strong>Upload your proof of payment</strong>
+                            <span>Your request reaches the registrar only after this. Pay at the Cashier's Office (or by GCash / bank transfer), then upload the official receipt or the transaction screenshot.</span>
+                        </div>
+                        <button type="button" class="btn btn-primary" data-pay-open data-request-id="<?= (int)$active_request['id'] ?>"
+                                data-request-title="<?= htmlspecialchars($active_request['form_title']) ?> #<?= str_pad($active_request['id'], 5, '0', STR_PAD_LEFT) ?>">
+                            <i class="fas fa-upload"></i> Upload proof of payment
+                        </button>
+                    </div>
+                <?php else: ?>
+                    <div class="pay-panel">
+                        <div class="pay-panel-icon"><i class="fas fa-circle-check"></i></div>
+                        <div class="pay-panel-text">
+                            <strong>Proof of payment sent</strong>
+                            <span>Uploaded <?= date('M j, Y \a\t g:i A', strtotime($active_request['payment_uploaded_at'])) ?>. You may replace it while the request is still being reviewed.</span>
+                        </div>
+                        <a class="btn btn-ghost" href="<?= htmlspecialchars($active_request['payment_proof']) ?>" target="_blank" rel="noopener"><i class="fas fa-eye"></i> View</a>
+                        <button type="button" class="btn btn-ghost" data-pay-open data-request-id="<?= (int)$active_request['id'] ?>"
+                                data-request-title="<?= htmlspecialchars($active_request['form_title']) ?> #<?= str_pad($active_request['id'], 5, '0', STR_PAD_LEFT) ?>">
+                            <i class="fas fa-arrows-rotate"></i> Replace
+                        </button>
+                    </div>
+                <?php endif; ?>
                 <div class="registrar-note calm">
-                    <strong>What happens next:</strong> the registrar checks your application. Once it is approved you will get a notification and an email with the exact date and time you may claim it, and the schedule will appear right here.
+                    <strong>What happens next:</strong> once your proof of payment is in, the registrar checks your application. Once it is approved you will get a notification and an email with the exact date and time you may claim it, and the schedule will appear right here.
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-ghost js-view-form"
@@ -687,6 +774,19 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
                     Online requests are currently available to ISAP students only. The <?= htmlspecialchars($user_institution ?: 'other') ?> forms are being prepared
                     and will show up here once the registrar's office releases them. In the meantime, please file your request at the registrar's office.
                 </p>
+            </div>
+        <?php elseif ($profile_missing): ?>
+            <div class="card locked-card profile-lock">
+                <div class="icon" style="background:#fef2f2; color:#dc2626"><i class="fas fa-user-lock"></i></div>
+                <h2 style="font-size:18px; margin-bottom:8px;">Complete your Student Profile first</h2>
+                <p style="color:#64748b; font-size:14px; max-width:560px; margin:0 auto 14px; line-height:1.6;">
+                    Every request is filled in from your profile, so the registrar needs it complete before you can file one.
+                    <?= count($profile_missing) ?> required <?= count($profile_missing) === 1 ? 'detail is' : 'details are' ?> still missing:
+                </p>
+                <ul class="missing-list">
+                    <?php foreach ($profile_missing as $missing_label): ?><li><?= htmlspecialchars($missing_label) ?></li><?php endforeach; ?>
+                </ul>
+                <a class="btn btn-primary" href="student_settings.php#edit-profile"><i class="fas fa-user-pen"></i> Complete my profile</a>
             </div>
         <?php elseif (!$fileable): ?>
             <div class="card locked-card">
@@ -918,7 +1018,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
                         </thead>
                         <tbody>
                         <?php foreach ($past as $r):
-                            $m = requestStatusMeta($r['status']);
+                            $m = requestStatusMeta($r['status'], $r);
                             $rev = trim(($r['reviewer_first'] ?? '') . ' ' . ($r['reviewer_last'] ?? ''));
                         ?>
                             <tr data-form="<?= htmlspecialchars($r['form_type'] ?: 'graduation') ?>">
@@ -975,7 +1075,7 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
     </div>
 
 <?php if ($just_submitted):
-    $js_meta = requestStatusMeta($just_submitted['status']);
+    $js_meta = requestStatusMeta($just_submitted['status'], $just_submitted);
     $js_type = $just_submitted['form_type'] ?: 'graduation';
 ?>
 <div class="receipt" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
@@ -985,8 +1085,8 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 
         <h2 id="receiptTitle">Request submitted</h2>
         <p class="receipt-sub">
-            Your <strong><?= htmlspecialchars($just_submitted['form_title']) ?></strong>
-            is now with the registrar&rsquo;s office.
+            Your <strong><?= htmlspecialchars($just_submitted['form_title']) ?></strong> was filed.
+            Upload your proof of payment to send it to the registrar&rsquo;s office.
         </p>
 
         <dl class="receipt-facts">
@@ -1008,14 +1108,18 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
 
         <p class="receipt-next">
             <i class="fas fa-circle-info"></i>
-            <span>You will get a notification and an email once it is approved, with the exact date and time you may claim it.</span>
+            <span><strong>Next step:</strong> upload the official receipt or the GCash / bank transfer screenshot. The registrar reviews the request once it is received, and you will be notified with the date and time you may claim it.</span>
         </p>
 
         <div class="receipt-actions">
             <!-- Nothing to download yet: the claim slip only exists once the
                  registrar approves this and sets a schedule. -->
-            <button type="button" class="btn btn-primary" data-receipt-close data-open-tracker="tracker-<?= htmlspecialchars($js_type) ?>">
+            <button type="button" class="btn btn-ghost" data-receipt-close data-open-tracker="tracker-<?= htmlspecialchars($js_type) ?>">
                 <i class="fas fa-list-check"></i> View my request
+            </button>
+            <button type="button" class="btn btn-primary" data-receipt-close data-pay-open data-request-id="<?= (int)$just_submitted['id'] ?>"
+                    data-request-title="<?= htmlspecialchars($just_submitted['form_title']) ?> #<?= str_pad($just_submitted['id'], 5, '0', STR_PAD_LEFT) ?>">
+                <i class="fas fa-upload"></i> Upload proof of payment
             </button>
         </div>
 
@@ -1185,6 +1289,98 @@ unset($_SESSION['flash'], $_SESSION['flash_type']);
         document.querySelector('.sidebar').classList.remove('active');
         document.body.classList.remove('sidebar-open');
     }
+</script>
+<div class="pay-modal" id="payModal" role="dialog" aria-modal="true" aria-labelledby="payTitle" hidden>
+    <div class="pay-modal-backdrop" data-pay-close></div>
+    <form class="pay-modal-card" method="POST" action="process_student_request.php" enctype="multipart/form-data" id="payForm">
+        <button type="button" class="pay-modal-x" data-pay-close aria-label="Close">&times;</button>
+        <h3 id="payTitle"><i class="fas fa-receipt" style="color:#f97316"></i> Upload proof of payment</h3>
+        <div class="pay-modal-sub" id="payFor"></div>
+        <input type="hidden" name="action" value="payment">
+        <input type="hidden" name="request_id" id="payRequestId">
+        <ul class="pay-rules">
+            <li>The <strong>official receipt</strong> from the Cashier's Office, or a <strong>GCash / bank transfer screenshot</strong>.</li>
+            <li>The <strong>reference number, amount, date</strong> and payee must be readable.</li>
+            <li>JPG, PNG or PDF, up to <?= (int)(REQUEST_PAYMENT_MAX_BYTES / 1048576) ?> MB.</li>
+        </ul>
+        <label class="pay-drop" id="payDrop">
+            <i class="fas fa-cloud-arrow-up"></i>
+            <strong>Choose a file or drop it here</strong>
+            <small>Tap to take a photo of the receipt on a phone</small>
+            <input type="file" name="payment_proof" id="payFile" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" required>
+        </label>
+        <div class="pay-file" id="payPreview"></div>
+        <p class="pay-error" id="payError" role="alert" hidden></p>
+        <div class="pay-actions">
+            <button type="button" class="btn btn-ghost" data-pay-close>Cancel</button>
+            <button type="submit" class="btn btn-primary" id="paySubmit"><i class="fas fa-paper-plane"></i> Send to registrar</button>
+        </div>
+    </form>
+</div>
+<script>
+    // Proof of payment: one modal for every "Upload proof of payment" button.
+    (function () {
+        const MAX = <?= (int)REQUEST_PAYMENT_MAX_BYTES ?>;
+        const modal = document.getElementById('payModal');
+        const form = document.getElementById('payForm');
+        const input = document.getElementById('payFile');
+        const drop = document.getElementById('payDrop');
+        const preview = document.getElementById('payPreview');
+        const error = document.getElementById('payError');
+        const submit = document.getElementById('paySubmit');
+        let lastFocus = null, url = null;
+
+        function fail(text) { error.textContent = text; error.hidden = !text; }
+        function check(file) {
+            if (!file) return 'Please choose the picture or PDF of your proof of payment.';
+            if (!/\.(jpe?g|png|pdf)$/i.test(file.name)) return 'The proof of payment must be a JPG, PNG or PDF file.';
+            if (file.size > MAX) return 'This file is larger than ' + Math.round(MAX / 1048576) + ' MB. Please choose a smaller one.';
+            return '';
+        }
+        function show(file) {
+            if (url) { URL.revokeObjectURL(url); url = null; }
+            preview.innerHTML = '';
+            preview.classList.toggle('is-shown', !!file);
+            if (!file) return;
+            const thumb = /\.pdf$/i.test(file.name)
+                ? Object.assign(document.createElement('span'), { className: 'pay-file-pdf', innerHTML: '<i class="fas fa-file-pdf"></i>' })
+                : Object.assign(document.createElement('img'), { src: (url = URL.createObjectURL(file)), alt: '' });
+            const name = Object.assign(document.createElement('span'), { className: 'pay-file-name', textContent: file.name });
+            const size = Object.assign(document.createElement('small'), { textContent: (file.size / 1048576).toFixed(2) + ' MB' });
+            preview.append(thumb, name, size);
+        }
+        function open(button) {
+            lastFocus = button;
+            document.getElementById('payRequestId').value = button.dataset.requestId;
+            document.getElementById('payFor').textContent = button.dataset.requestTitle || '';
+            form.reset(); show(null); fail(''); submit.disabled = false;
+            modal.hidden = false;
+            setTimeout(() => drop.focus(), 30);
+        }
+        function close() { modal.hidden = true; if (lastFocus) lastFocus.focus(); }
+
+        document.addEventListener('click', e => {
+            const button = e.target.closest('[data-pay-open]');
+            if (button) { setTimeout(() => open(button), button.hasAttribute('data-receipt-close') ? 240 : 0); return; }
+            if (e.target.closest('[data-pay-close]')) close();
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
+        input.addEventListener('change', () => { const f = input.files[0]; fail(check(f)); show(f); });
+        ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('is-over'); }));
+        ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, () => drop.classList.remove('is-over')));
+        drop.addEventListener('drop', e => {
+            e.preventDefault();
+            if (!e.dataTransfer.files.length) return;
+            input.files = e.dataTransfer.files;
+            input.dispatchEvent(new Event('change'));
+        });
+        form.addEventListener('submit', e => {
+            const problem = check(input.files[0]);
+            if (problem) { e.preventDefault(); fail(problem); return; }
+            submit.disabled = true;
+            submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        });
+    })();
 </script>
 </body>
 </html>

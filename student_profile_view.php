@@ -1,25 +1,32 @@
 <?php
 /**
- * A student's profile as a read-only HTML fragment.
+ * A student's profile as an HTML fragment for the profile modal.
  *
  *   (no id)  the signed-in student's own profile
  *   ?id=N    that student, for a registrar - and only a student of the
- *            registrar's own institution, the same scoping every registrar
- *            page uses. A student can never name someone else: the id is
- *            ignored for them.
+ *            registrar's own institution (fetchStudentForViewer), the same
+ *            scoping every registrar page uses. A student can never name
+ *            someone else: the id is ignored for them.
+ *   ?id=N&mode=edit  the same profile as a form, for a registrar
+ *            (renderProfileForm in profile_form.php - the very fields the
+ *            student's own Edit Profile draws). student_profile.js posts it to
+ *            process_registrar_profile.php.
  *   ?status=1  JSON {"missing": N} for the signed-in student: how many required
  *            answers their profile still lacks. student_profile.js turns it
  *            into the red badge on their picture.
  *
  * student_profile.js fetches this the first time a profile is opened and
  * injects it into the modal, so no page pays for a profile until it is
- * actually wanted. Nothing here can be edited - the form lives in
- * student_settings.php. Every value goes through $e(), because the fragment is
- * injected with innerHTML.
+ * actually wanted. A student edits only in student_settings.php. Every value
+ * goes through $e(), because the fragment is injected with innerHTML.
+ *
+ * The picture opens large in the modal (data-sp-photo) with a download
+ * (download_profile_photo.php). A registrar also gets Edit Profile, Download
+ * PDF (download_student_profile_pdf.php) and Download as Excel.
  */
 session_start();
 require_once 'db.php';
-require_once 'profile_config.php';
+require_once 'profile_form.php';
 
 $want_status = isset($_GET['status']);
 header('Content-Type: ' . ($want_status ? 'application/json' : 'text/html') . '; charset=utf-8');
@@ -53,35 +60,42 @@ if ($want_status) {
     exit;
 }
 
-$stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, student_id, email, profile_picture,
-                                 year_level, section, course, institution, contact_number, address, profile_data
-                          FROM users WHERE id = ? AND role = 'student'");
-$stmt->bind_param('i', $target_id);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-// A registrar sees only their own institution's students. A student outside it
-// is reported exactly like one that does not exist.
-if ($user && !$is_own) {
-    $stmt = $mysqli->prepare("SELECT institution FROM users WHERE id = ?");
-    $stmt->bind_param('i', $viewer_id);
-    $stmt->execute();
-    $viewer_institution = $stmt->get_result()->fetch_assoc()['institution'] ?? '';
-    $stmt->close();
-    if (!empty($viewer_institution) && ($user['institution'] ?? '') !== $viewer_institution) {
-        $user = null;
-    }
-}
-
+$user = fetchStudentForViewer($mysqli, $target_id, $viewer_id, $viewer_role);
 if (!$user) {
     http_response_code(404);
     echo '<p class="sp-empty">Profile not found.</p>';
     exit;
 }
+$target_id = (int)$user['id'];
 
 $e = fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 $profile = decodeStudentProfile($user['profile_data'] ?? '');
+
+if (($_GET['mode'] ?? '') === 'edit') {
+    if ($is_own) {
+        http_response_code(403);
+        echo '<p class="sp-empty">Edit your profile in <a href="student_settings.php#edit-profile">Settings &rsaquo; Edit Profile</a>.</p>';
+        exit;
+    }
+    $display = trim(implode(' ', array_filter([$user['first_name'], $user['last_name']]))) ?: $user['email'];
+    ?>
+<form class="sp-form" data-profile-form data-sp-form="<?= $target_id ?>" enctype="multipart/form-data" autocomplete="off">
+    <input type="hidden" name="id" value="<?= $target_id ?>">
+    <div class="sp-form-note">
+        <i class="fas fa-pen-to-square"></i>
+        <span>You are editing <strong><?= $e($display) ?></strong>'s profile. The student is notified when you save, and the change is recorded in the audit trail.</span>
+    </div>
+    <div class="pf-flash is-error sp-form-errors" role="alert" tabindex="-1" hidden></div>
+    <?php renderProfileForm($user, $profile, 'registrar'); ?>
+    <div class="sp-form-bar">
+        <button type="button" class="pf-btn is-ghost" data-sp-cancel><i class="fas fa-xmark"></i> Cancel</button>
+        <button type="submit" class="pf-btn is-primary" data-sp-save><i class="fas fa-floppy-disk"></i> Save Changes</button>
+    </div>
+</form>
+    <?php
+    exit;
+}
+
 // What a complete profile still needs - the same list that drives the badge.
 $missing = profileMissingFields($user, $profile);
 
@@ -103,7 +117,14 @@ $age = profileAge($profile['birth_date'] ?? '');
 ?>
 <div class="sp-head">
     <?php if (!empty($user['profile_picture'])): ?>
-        <img class="sp-photo" src="<?= $e($user['profile_picture']) ?>" alt="">
+        <?php /* Opens the picture large, with a download (student_profile.js). */ ?>
+        <button type="button" class="sp-photo-btn" title="View picture"
+                data-sp-photo="<?= $e($user['profile_picture']) ?>"
+                data-sp-photo-name="<?= $e($full_name) ?>"
+                data-sp-photo-download="download_profile_photo.php<?= $is_own ? '' : '?id=' . $target_id ?>">
+            <img class="sp-photo" src="<?= $e($user['profile_picture']) ?>" alt="Profile picture of <?= $e($full_name) ?>" decoding="async">
+            <span class="sp-photo-zoom" aria-hidden="true"><i class="fas fa-magnifying-glass-plus"></i></span>
+        </button>
     <?php else: ?>
         <div class="sp-photo is-initial"><?= $e(strtoupper(mb_substr($user['first_name'] ?: $user['email'], 0, 1))) ?></div>
     <?php endif; ?>
@@ -220,12 +241,22 @@ $age = profileAge($profile['birth_date'] ?? '');
             <?= $missing ? 'Fill them in at' : 'It is view-only here; to change anything, go to' ?>
             <a href="student_settings.php#edit-profile">Settings &rsaquo; Edit Profile</a>.
         <?php else: ?>
-            It is view-only: students keep it up to date from their own Settings.
+            Students keep it up to date from their own Settings; use <strong>Edit Profile</strong> below to correct it.
         <?php endif; ?>
     </span>
 </div>
-<?php if (!$is_own): ?>
+<?php if ($is_own): ?>
+<div class="sp-actions is-own">
+    <a class="sp-act is-pdf" href="download_student_profile_pdf.php" download><i class="fas fa-file-pdf"></i> Download PDF</a>
+    <a class="sp-act sp-excel" href="export_student_profiles.php" download><i class="fas fa-file-excel"></i> Download Excel</a>
+</div>
+<?php else: ?>
 <div class="sp-actions">
-    <a class="sp-excel" href="export_student_profiles.php?id=<?= (int)$target_id ?>"><i class="fas fa-file-excel"></i> Download as Excel</a>
+    <button type="button" class="sp-act is-edit" data-sp-edit="<?= $target_id ?>"><i class="fas fa-pen-to-square"></i> Edit Profile</button>
+    <a class="sp-act is-pdf" href="download_student_profile_pdf.php?id=<?= $target_id ?>" download><i class="fas fa-file-pdf"></i> Download PDF</a>
+    <a class="sp-act sp-excel" href="export_student_profiles.php?id=<?= $target_id ?>" download><i class="fas fa-file-excel"></i> Download as Excel</a>
+    <?php if (!empty($user['profile_picture'])): ?>
+        <a class="sp-act is-photo" href="download_profile_photo.php?id=<?= $target_id ?>" download><i class="fas fa-image"></i> Download Photo</a>
+    <?php endif; ?>
 </div>
 <?php endif; ?>

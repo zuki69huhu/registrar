@@ -61,8 +61,13 @@ html[data-theme-invert] .pf-done-backdrop,
 html[data-theme-invert] .uid-backdrop,
 html[data-theme-invert] .rv-backdrop,
 html[data-theme-invert] .doc-viewer-backdrop,
-html[data-theme-invert] .receipt-backdrop {
+html[data-theme-invert] .receipt-backdrop,
+html[data-theme-invert] .pay-modal-backdrop {
     background: rgba(226, 232, 240, 0.62);
+}
+/* The profile picture viewer is nearly opaque dark; inverted it stays as solid. */
+html[data-theme-invert] .sp-lightbox {
+    background: rgba(241, 245, 249, 0.94);
 }
 
 
@@ -143,6 +148,7 @@ html[data-theme-invert][data-theme-base="light"] .pf-edu .form-input,
 html[data-theme-invert][data-theme-base="light"] .pf-copy-place,
 html[data-theme-invert][data-theme-base="light"] .pf-btn.is-ghost,
 html[data-theme-invert][data-theme-base="light"] .pf-done-card,
+html[data-theme-invert][data-theme-base="light"] .pay-modal-card,
 html[data-theme-invert][data-theme-base="light"] body.student-mode .search-bar,
 html[data-theme-invert][data-theme-base="light"] body.student-mode .topbar-icon-btn,
 html[data-theme-invert][data-theme-base="light"] body.student-mode .table-card,

@@ -36,6 +36,11 @@ function ensureProfileColumn($mysqli) {
         if ($res && $res->num_rows === 0) {
             $mysqli->query("ALTER TABLE users ADD COLUMN profile_data TEXT NULL");
         }
+        // When the student used their one-time correction of name / date of birth.
+        $res = $mysqli->query("SHOW COLUMNS FROM users LIKE 'identity_edited_at'");
+        if ($res && $res->num_rows === 0) {
+            $mysqli->query("ALTER TABLE users ADD COLUMN identity_edited_at DATETIME NULL");
+        }
     } catch (Exception $e) {
         error_log('Profile column setup failed: ' . $e->getMessage());
     }
@@ -348,6 +353,48 @@ function profileMissingFields($user, $profile) {
         }
     }
     return $missing;
+}
+
+/**
+ * The `users` row of the student a signed-in user may look at, or null.
+ *
+ * A student only ever gets their own row ($student_id is ignored for them). A
+ * registrar gets any student of their own institution - the scoping every
+ * registrar page uses - and one outside it is reported exactly like one that
+ * does not exist. Everyone else gets null. student_profile_view.php, the
+ * registrar's profile editor, the photo download and the profile PDF all ask
+ * this, so they can never disagree about who may see whom.
+ */
+function fetchStudentForViewer($mysqli, $student_id, $viewer_id, $viewer_role) {
+    $viewer_id = (int)$viewer_id;
+    if ($viewer_role === 'student') {
+        $student_id = $viewer_id;
+    } elseif ($viewer_role !== 'registrar') {
+        return null;
+    }
+    $student_id = (int)$student_id;
+    if ($student_id <= 0 || $viewer_id <= 0) return null;
+
+    $stmt = $mysqli->prepare("SELECT id, first_name, middle_name, last_name, student_id, email, profile_picture,
+                                     year_level, section, course, institution, contact_number, address, profile_data
+                              FROM users WHERE id = ? AND role = 'student'");
+    if (!$stmt) return null;
+    $stmt->bind_param('i', $student_id);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc() ?: null;
+    $stmt->close();
+
+    if ($user && $viewer_role === 'registrar') {
+        $stmt = $mysqli->prepare("SELECT institution FROM users WHERE id = ?");
+        $stmt->bind_param('i', $viewer_id);
+        $stmt->execute();
+        $viewer_institution = $stmt->get_result()->fetch_assoc()['institution'] ?? '';
+        $stmt->close();
+        if (!empty($viewer_institution) && ($user['institution'] ?? '') !== $viewer_institution) {
+            return null;
+        }
+    }
+    return $user;
 }
 
 /** Drops the blank answers, at every level, so the stored JSON holds only what was filled in. */

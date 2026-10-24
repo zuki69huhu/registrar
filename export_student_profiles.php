@@ -1,6 +1,7 @@
 <?php
 /**
- * Student profiles as an Excel workbook, for a registrar.
+ * Student profiles as an Excel workbook, for a registrar - and a student's own
+ * profile for that student.
  *
  *   export_student_profiles.php                 every active student of the registrar's institution
  *   export_student_profiles.php?course=&year=   narrowed the same way Analytics narrows its table
@@ -10,6 +11,10 @@
  * (profile_config.php), plus the account details the registrar already keeps.
  * A blank answer stays an empty cell; the last two columns say whether the
  * profile is complete and what is still missing.
+ *
+ * A student gets only their own profile (any ?id= is ignored), laid out as a
+ * two-column Field / Answer sheet, grouped by section, which reads like the
+ * profile itself instead of one very wide row.
  */
 session_start();
 require_once 'db.php';
@@ -18,7 +23,8 @@ require_once 'profile_config.php';
 require_once 'audit_log_helper.php';
 require_once 'xlsx_writer.php';
 
-if (($_SESSION['role'] ?? '') !== 'registrar' || empty($_SESSION['user_id'])) {
+$is_student = ($_SESSION['role'] ?? '') === 'student';
+if (!in_array($_SESSION['role'] ?? '', ['registrar', 'student'], true) || empty($_SESSION['user_id'])) {
     $_SESSION['flash'] = 'Access denied.';
     header('Location: index.php?tab=login');
     exit;
@@ -31,9 +37,11 @@ $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $institution = trim((string)($stmt->get_result()->fetch_assoc()['institution'] ?? ''));
 $stmt->close();
+// A student: their own row and nothing else.
+if ($is_student) $_GET = ['id' => (int)$_SESSION['user_id']];
 
 // Same students as Analytics: approved accounts, scoped to the registrar's institution.
-$where = "u.role = 'student' AND u.is_verified = 2";
+$where = $is_student ? "u.role = 'student'" : "u.role = 'student' AND u.is_verified = 2";
 $types = '';
 $params = [];
 if ($institution !== '') { $where .= ' AND u.institution = ?'; $types .= 's'; $params[] = $institution; }
@@ -133,11 +141,29 @@ if ($one_id > 0) {
 $file = trim(preg_replace('/[^A-Za-z0-9 ,.\-]+/', '_', $file)) . '.xlsx';
 
 logAudit($mysqli, $_SESSION['user_id'], 'STUDENT_PROFILES_EXPORTED',
-    $one_id > 0 ? 'Downloaded the student profile of ' . formatPersonNameRow($students[0]) . ' as Excel.'
-                : 'Downloaded ' . count($rows) . ' student profile(s) as Excel' . ($course !== '' || $year !== '' ? ' (' . trim($course . ' ' . $year) . ')' : '') . '.',
+    $is_student ? 'Downloaded their own student profile as Excel.' :
+    ($one_id > 0 ? 'Downloaded the student profile of ' . formatPersonNameRow($students[0]) . ' as Excel.'
+                : 'Downloaded ' . count($rows) . ' student profile(s) as Excel' . ($course !== '' || $year !== '' ? ' (' . trim($course . ' ' . $year) . ')' : '') . '.'),
     $one_id > 0 ? $one_id : null);
 
-$bytes = xlsxBuild($one_id > 0 ? 'Student Profile' : 'Student Profiles', array_column($columns, 0), $rows, array_column($columns, 1));
+if ($is_student) {
+    // Field / Answer, one line per answer, with a heading line per section.
+    $sections = [
+        0 => 'PERSONAL INFORMATION', 14 => 'SCHOOL & CONTACT', 20 => 'PERMANENT ADDRESS', 27 => 'FATHER',
+        33 => 'MOTHER', 39 => 'GUARDIAN / PERSON TO CONTACT', 43 => 'EDUCATIONAL BACKGROUND', count($columns) - 2 => 'PROFILE STATUS',
+    ];
+    $pairs = [];
+    foreach ($columns as $i => [$header]) {
+        if (isset($sections[$i])) {
+            if ($pairs) $pairs[] = ['', ''];
+            $pairs[] = [$sections[$i], ''];
+        }
+        $pairs[] = [$header, $rows[0][$i] ?? ''];
+    }
+    $bytes = xlsxBuild('My Student Profile', ['Field', 'Answer'], $pairs, [34, 60]);
+} else {
+    $bytes = xlsxBuild($one_id > 0 ? 'Student Profile' : 'Student Profiles', array_column($columns, 0), $rows, array_column($columns, 1));
+}
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="' . $file . '"');
 header('Content-Length: ' . strlen($bytes));

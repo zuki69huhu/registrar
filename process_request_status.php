@@ -106,6 +106,10 @@ switch ($action) {
         if ($action === 'approve' && $request['status'] !== 'pending') {
             requestStatusError('Only a pending request can be approved.', $redirect_to);
         }
+        // A request reaches the registrar only with its proof of payment.
+        if ($action === 'approve' && empty($request['payment_proof'])) {
+            requestStatusError('This request cannot be approved yet: the student has not uploaded a proof of payment.', $redirect_to);
+        }
         if ($action === 'reschedule' && $request['status'] !== 'approved') {
             requestStatusError('Only an approved request can be rescheduled.', $redirect_to);
         }

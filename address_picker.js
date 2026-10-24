@@ -24,6 +24,8 @@
  * Whenever the city or barangay of a group changes - picked, restored on load,
  * or cleared because a level above changed - the group fires a `placechange`
  * event with {provinceCode, city, barangay}; school_picker.js listens to it.
+ * A form added after the page loaded is set up with
+ * window.PlacePicker.init(container); a group is never set up twice.
  * Keep this file ASCII-only.
  */
 (function () {
@@ -104,7 +106,8 @@
         LEVELS.forEach(function (level) {
             el[level] = group.querySelector('select[data-place="' + level + '"]');
         });
-        if (!el.region || !el.province || !el.city) return;
+        if (!el.region || !el.province || !el.city || group.spPlaceReady) return;
+        group.spPlaceReady = true;     // init may run again over a form added later
 
         // What to restore, used once on the way down and then forgotten.
         var want = {};
@@ -205,10 +208,13 @@
             values[level] = select ? select.value : '';
         });
         if (!values.region) {
-            button.textContent = 'Pick your permanent address first';
+            if (!button.hasAttribute('data-label')) button.setAttribute('data-label', button.innerHTML);
+            button.textContent = 'Pick the permanent address first';
+            setTimeout(function () { button.innerHTML = button.getAttribute('data-label'); }, 2500);
             return;
         }
         to.setPlace(values);
+        if (!button.hasAttribute('data-label')) button.setAttribute('data-label', button.innerHTML);
         var street = from.querySelector('input[name$="[street]"]');
         var target = to.querySelector('input[name$="[street]"]');
         if (street && target) target.value = street.value;
@@ -216,12 +222,19 @@
         button.innerHTML = '<i class="fas fa-check"></i> Copied';
         setTimeout(function () {
             button.classList.remove('is-done');
-            button.innerHTML = '<i class="fas fa-copy"></i> Same as my permanent address';
+            button.innerHTML = button.getAttribute('data-label');
         }, 2000);
     }
 
+    function setupAll(root) {
+        (root || document).querySelectorAll('[data-place-group]').forEach(setup);
+    }
+
+    // For a form injected after the page loaded (the registrar's profile editor).
+    window.PlacePicker = { init: setupAll };
+
     function init() {
-        document.querySelectorAll('[data-place-group]').forEach(setup);
+        setupAll(document);
         document.addEventListener('click', function (event) {
             var button = event.target.closest('[data-copy-from]');
             if (button) copyPlace(button);

@@ -6,6 +6,11 @@
  * browser-side `required` attributes and this check always agree. A request is
  * always stored as `pending`: only a registrar can move it on, in
  * process_request_status.php.
+ *
+ * A request can only be filed once the Student Profile is complete
+ * (profileMissingFields), and it reaches the registrar only after the student
+ * uploads a proof of payment for it (action "payment"); until then the
+ * registrar sees it as "Awaiting payment" and cannot approve it.
  */
 
 session_start();
@@ -14,6 +19,8 @@ require_once 'request_config.php';
 require_once 'notification_helper.php';
 require_once 'audit_log_helper.php';
 require_once 'name_helper.php';
+require_once 'profile_config.php';
+require_once 'upload_store_helper.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     $_SESSION['flash'] = 'Access denied.';
@@ -41,7 +48,7 @@ function requestFail($message) {
 }
 
 // The student's own record supplies the institution and the name on the audit trail.
-$stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, email, student_id, institution FROM users WHERE id = ?");
+$stmt = $mysqli->prepare("SELECT first_name, middle_name, last_name, email, student_id, institution, contact_number, address, profile_data FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $student = $stmt->get_result()->fetch_assoc();
@@ -87,8 +94,85 @@ if ($action === 'cancel') {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Proof of payment — the student's own pending request; it may be replaced
+// until the registrar decides
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'payment') {
+    $request_id = filter_var($_POST['request_id'] ?? '', FILTER_VALIDATE_INT);
+    if (!$request_id) requestFail('Invalid request.');
+
+    $stmt = $mysqli->prepare("SELECT id, form_title, status, payment_proof FROM student_requests WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $request_id, $user_id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$row) requestFail('That request no longer exists.');
+    if ($row['status'] !== 'pending') requestFail('This request has already been reviewed, so its payment can no longer be changed.');
+
+    $file = $_FILES['payment_proof'] ?? null;
+    if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) requestFail('Please choose the picture or PDF of your proof of payment.');
+    if (in_array($file['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true) || $file['size'] > REQUEST_PAYMENT_MAX_BYTES) {
+        requestFail('The proof of payment is larger than ' . (REQUEST_PAYMENT_MAX_BYTES / 1048576) . ' MB. Please upload a smaller file.');
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) requestFail('The proof of payment could not be uploaded. Please try again.');
+
+    // The bytes must really be a picture or a PDF, not just named like one.
+    $ext = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+    $head = (string)@file_get_contents($file['tmp_name'], false, null, 0, 5);
+    $is_image = in_array($ext, ['jpg', 'jpeg', 'png'], true) && ($info = @getimagesize($file['tmp_name'])) && in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG], true);
+    $is_pdf = $ext === 'pdf' && $head === '%PDF-';
+    if (!isset(REQUEST_PAYMENT_TYPES[$ext]) || (!$is_image && !$is_pdf)) {
+        requestFail('The proof of payment must be a JPG, PNG or PDF file.');
+    }
+
+    $dir = 'uploads/payments/';
+    if (!is_dir(__DIR__ . '/' . $dir)) mkdir(__DIR__ . '/' . $dir, 0777, true);
+    $path = $dir . time() . '_' . $request_id . '_' . safeUploadFileName(basename((string)$file['name']));
+    if (!move_uploaded_file($file['tmp_name'], __DIR__ . '/' . $path)) requestFail('The proof of payment could not be saved. Please try again.');
+    storeUploadInDb($mysqli, $path);
+
+    $stmt = $mysqli->prepare("UPDATE student_requests SET payment_proof = ?, payment_uploaded_at = NOW() WHERE id = ? AND user_id = ? AND status = 'pending'");
+    $stmt->bind_param("sii", $path, $request_id, $user_id);
+    $ok = $stmt->execute() && $stmt->affected_rows > 0;
+    $stmt->close();
+    if (!$ok) requestFail('The proof of payment could not be saved. Please try again.');
+    // A replaced proof is no longer needed.
+    if (!empty($row['payment_proof']) && $row['payment_proof'] !== $path) {
+        deleteStoredUpload($mysqli, $row['payment_proof']);
+        @unlink(__DIR__ . '/' . $row['payment_proof']);
+    }
+
+    $replaced = !empty($row['payment_proof']);
+    logAudit($mysqli, $user_id, 'REQUEST_PAYMENT_UPLOADED',
+        ($replaced ? 'Replaced' : 'Uploaded') . " the proof of payment for request #{$request_id} ({$row['form_title']}).", $user_id);
+
+    // In the portal only, so the upload answers at once.
+    $note = $mysqli->prepare("INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'success')");
+    if ($note) {
+        $message = "Your proof of payment for {$row['form_title']} (#" . str_pad($request_id, 5, '0', STR_PAD_LEFT) . ") was received. The registrar will now review your request.";
+        $note->bind_param('is', $user_id, $message);
+        $note->execute();
+        $note->close();
+    }
+
+    $_SESSION['flash'] = $replaced
+        ? 'Your proof of payment was replaced. The registrar will review the new one.'
+        : 'Proof of payment received! Your request has been sent to the registrar for review.';
+    $_SESSION['flash_type'] = 'success';
+    header("Location: student_request.php");
+    exit;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Submit
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Only a complete Student Profile may file: the forms are filled from it.
+$profile_missing = profileMissingFields($student, decodeStudentProfile($student['profile_data'] ?? ''));
+if ($profile_missing) {
+    requestFail('Please complete your Student Profile before filing a request. Still missing: ' . implode(', ', $profile_missing) . '.');
+}
+
 $form_type = trim($_POST['form_type'] ?? '');
 $form = getRequestForm($institution, $form_type);
 if (!$form) {
@@ -204,8 +288,16 @@ if ($form_type === 'graduation') {
     $signed_name = trim(($form_data['first_name'] ?? '') . ' ' . ($form_data['middle_name'] ?? '') . ' ' . ($form_data['last_name'] ?? ''));
 } else {
     // Form 137: the printed letter ticks First or Second Request, never both.
-    $form_data['first_request']  = ($form_data['request_type'] ?? '') === 'First Request';
-    $form_data['second_request'] = ($form_data['request_type'] ?? '') === 'Second Request';
+    // The student is not asked: it is a Second Request when the registrar has
+    // already processed this form for them once (approved or claimed).
+    $stmt = $mysqli->prepare("SELECT COUNT(*) AS c FROM student_requests WHERE user_id = ? AND form_type = ? AND status IN ('approved','claimed')");
+    $stmt->bind_param("is", $user_id, $form_type);
+    $stmt->execute();
+    $earlier = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    $stmt->close();
+    $form_data['request_type']   = $earlier ? 'Second Request' : 'First Request';
+    $form_data['first_request']  = !$earlier;
+    $form_data['second_request'] = (bool)$earlier;
 
     $signed_name = trim((string)($form_data['student_name'] ?? ''));
 }
@@ -246,10 +338,11 @@ logAudit(
 sendNotificationAndEmail(
     $mysqli,
     $user_id,
-    "Your {$form_title} has been received and is now waiting for the registrar's review. "
-    . "You will be notified once it is approved, together with the date and time you may claim it.",
+    "Your {$form_title} (#" . str_pad($request_id, 5, '0', STR_PAD_LEFT) . ") has been filed. "
+    . "Next, upload your proof of payment on the Requests page: the registrar reviews the request once it is received. "
+    . "You will be notified when it is approved, together with the date and time you may claim it.",
     'info',
-    'Request Received'
+    'Request Filed - Upload Your Proof of Payment'
 );
 
 // The page shows a receipt modal rather than a one-line flash, so it is handed

@@ -490,9 +490,12 @@ function renderLetterDocument(array $request, array $form) {
     $school_full = trim(trim((string)($data['school_name'] ?? '')) . ', ' . trim((string)($data['school_address'] ?? '')), ' ,');
     $values = $data + ['school_full' => $school_full];
 
+    // First / Second Request is the registrar's business: the student's own view
+    // of the sheet leaves those two boxes blank.
+    $for_registrar = ($_SESSION['role'] ?? '') !== 'student';
     $ticks = [
-        'first_request'     => !empty($data['first_request']),
-        'second_request'    => !empty($data['second_request']),
+        'first_request'     => $for_registrar && !empty($data['first_request']),
+        'second_request'    => $for_registrar && !empty($data['second_request']),
         'urgent'            => !empty($data['urgent']),
         'entrust_to_bearer' => !empty($data['entrust_to_bearer']),
     ];

@@ -16,7 +16,8 @@
  * writes its name into the input, and sets the barangay to the school's own when
  * none was chosen. "My school is not on the list" shows the input to type the
  * name instead. A saved name that is not in the list comes back the same way.
- * Without JavaScript the input is simply a text box, as before.
+ * Without JavaScript the input is simply a text box, as before. A form added
+ * later is set up with window.SchoolPicker.init(container).
  *
  * The lists are psgc/s_<province code>.json, built from the DepEd masterlist of
  * schools (SY 2020-2021): {"<city>": [[name, barangay, levels, private], ...]}.
@@ -58,7 +59,8 @@
         var group = wrap.querySelector('[data-place-group]');
         var select = wrap.querySelector('select[data-school-select]');
         var input = wrap.querySelector('input[data-school-other]');
-        if (!group || !select || !input) return;
+        if (!group || !select || !input || wrap.spSchoolReady) return;
+        wrap.spSchoolReady = true;     // init() may run again over a form added later
 
         var mask = parseInt(wrap.getAttribute('data-levels'), 10) || 0;
         var barangaySelect = group.querySelector('select[data-place="barangay"]');
@@ -81,7 +83,7 @@
         function render(city, barangay) {
             select.innerHTML = '';
             select.disabled = false;
-            select.appendChild(option('', current.length ? 'Select your school...' : 'No school of this level is listed here'));
+            select.appendChild(option('', current.length ? 'Select the school...' : 'No school of this level is listed here'));
 
             var here = barangay ? current.filter(function (s) { return s[1] === barangay; }) : [];
             var rest = barangay ? current.filter(function (s) { return s[1] !== barangay; }) : current;
@@ -96,7 +98,7 @@
             }
             addGroup('In ' + barangay, here);
             addGroup(here.length ? 'Elsewhere in ' + city : 'Schools in ' + city, rest);
-            select.appendChild(option(OTHER, 'My school is not on the list - type it'));
+            select.appendChild(option(OTHER, 'The school is not on the list - type it'));
 
             // Show the saved / typed name: picked when it is listed, typed when not.
             var name = input.value.trim();
@@ -154,13 +156,17 @@
         message('Choose the school\'s city / municipality first');
     }
 
-    function init() {
-        document.querySelectorAll('[data-school-picker]').forEach(setup);
+    function init(root) {
+        (root || document).querySelectorAll('[data-school-picker]').forEach(setup);
     }
+
+    // For a form injected after the page loaded (the registrar's profile editor):
+    // SchoolPicker.init(container), just before PlacePicker.init(container).
+    window.SchoolPicker = { init: init };
 
     // Set up before address_picker.js restores saved places, so no event is missed.
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function () { init(); });
     } else {
         init();
     }
